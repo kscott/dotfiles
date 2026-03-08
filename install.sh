@@ -41,6 +41,11 @@ mkdir -p $DOTFILES/zsh/cache
 echo "==> Creating secrets file (if missing)"
 [[ -f $DOTFILES/zsh/secrets.zsh ]] || cp $DOTFILES/zsh/secrets.zsh.example $DOTFILES/zsh/secrets.zsh 2>/dev/null || true
 
+echo "==> Linking ssh config"
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+link ssh/config .ssh/config
+
 echo "==> Linking git config"
 link git/gitconfig  .gitconfig
 link git/gitignore  .gitignore
@@ -101,9 +106,12 @@ echo ""
 echo "Next steps:"
 echo "  1. Run: gh auth login   (set up personal GitHub credentials)"
 echo "  2. Add any personal tokens to ~/.zsh/secrets.zsh"
-echo "  6. iTerm2: quit iTerm2, run: python3 ~/bin/fix-claude-iterm-colors.py, then relaunch"
+echo "  3. Set up SSH key for this machine:"
+echo "       ssh-keygen -t ed25519 -C 'ken@optikos.net'"
+echo "       gh ssh-key add ~/.ssh/id_ed25519.pub --title \"\$(scutil --get ComputerName)\""
+echo "  4. iTerm2: quit iTerm2, run: python3 ~/bin/fix-claude-iterm-colors.py, then relaunch"
 echo "     (patches Claude profile colors/font and registers gruvbox color presets)"
-echo "  7. Reminders CLI: gh repo clone kscott/reminders-cli ~/dev/reminders-cli && ~/dev/reminders-cli/reminders setup"
+echo "  5. Reminders CLI: gh repo clone kscott/reminders-cli ~/dev/reminders-cli && ~/dev/reminders-cli/reminders setup"
 echo ""
 if [[ -d $BACKUP ]]; then
   echo "Backed up old files to: $BACKUP"
