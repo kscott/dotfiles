@@ -71,6 +71,7 @@ echo "  3. Run: git config --global user.email 'you@example.com'"
 echo "  4. Add any personal tokens to ~/.zsh/secrets.zsh"
 echo "  5. Open vim and run: :PlugInstall"
 echo "  6. iTerm2: quit iTerm2, run: python3 ~/bin/fix-claude-iterm-colors.py, then relaunch"
+echo "  7. Reminders CLI: gh repo clone kscott/reminders-cli ~/dev/reminders-cli && ~/dev/reminders-cli/reminders setup"
 echo ""
 if [[ -d $BACKUP ]]; then
   echo "Backed up old files to: $BACKUP"
