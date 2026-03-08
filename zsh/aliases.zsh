@@ -23,3 +23,6 @@ alias show-files='defaults write com.apple.finder AppleShowAllFiles YES; killall
 alias hide-files='defaults write com.apple.finder AppleShowAllFiles NO; killall Finder'
 
 alias ack=rg
+
+alias mdview='glow'
+alias mdv='glow'

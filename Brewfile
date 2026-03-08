@@ -21,6 +21,7 @@ brew "delta"        # better git diff pager (used in gitconfig)
 # Search / navigation
 brew "fzf"
 brew "ripgrep"
+brew "glow"         # markdown renderer (aliased as mdview, mdv)
 
 # GitHub
 brew "gh"
