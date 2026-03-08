@@ -56,6 +56,11 @@ fi
 echo "==> Creating vim runtime directories"
 mkdir -p ~/.vim/{undo,backup,swap}
 
+echo "==> Linking bin scripts"
+mkdir -p $HOME/bin
+link bin/claude-status.sh   bin/claude-status.sh
+link bin/fix-claude-iterm-colors.py bin/fix-claude-iterm-colors.py
+
 echo ""
 echo "Done. Open a new shell to pick up the changes."
 echo ""
@@ -64,8 +69,8 @@ echo "  1. Run: gh auth login   (set up personal GitHub credentials)"
 echo "  2. Run: git config --global user.name  'Your Name'"
 echo "  3. Run: git config --global user.email 'you@example.com'"
 echo "  4. Add any personal tokens to ~/.zsh/secrets.zsh"
-echo "  5. Run: brew install fzf ripgrep  (if not already installed)"
-echo "  6. Open vim and run: :PlugInstall"
+echo "  5. Open vim and run: :PlugInstall"
+echo "  6. iTerm2: quit iTerm2, run: python3 ~/bin/fix-claude-iterm-colors.py, then relaunch"
 echo ""
 if [[ -d $BACKUP ]]; then
   echo "Backed up old files to: $BACKUP"

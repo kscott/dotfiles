@@ -24,6 +24,13 @@ dotfiles/
 - The `link` function is idempotent — safe to re-run
 - `~/.zsh/secrets.zsh` is gitignored and never committed
 
+## Bin scripts
+
+- `bin/claude-status.sh` → `~/bin/claude-status.sh` — Claude Code status bar (folder + git branch)
+- `bin/fix-claude-iterm-colors.py` → `~/bin/fix-claude-iterm-colors.py` — Patches iTerm2 Claude profile with gruvbox colors/transparency
+
+To apply iTerm2 colors on a new machine: quit iTerm2, run `python3 ~/bin/fix-claude-iterm-colors.py`, relaunch.
+
 ## Adding a new dotfile
 
 1. Move the file into the appropriate place in this repo
