@@ -52,6 +52,10 @@ link ripgreprc  .ripgreprc
 link rspec      .rspec
 link doingrc    .doingrc
 
+echo "==> Linking ~/.config"
+mkdir -p ~/.config
+link config/gh .config/gh
+
 echo "==> Linking git config"
 link git/gitconfig  .gitconfig
 link git/gitignore  .gitignore
