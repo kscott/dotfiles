@@ -31,6 +31,14 @@ dotfiles/
 
 To apply iTerm2 colors on a new machine: quit iTerm2, run `python3 ~/bin/fix-claude-iterm-colors.py`, relaunch.
 
+## iTerm2 color presets
+
+`iterm/` contains importable color presets:
+- `gruvbox-dark.itermcolors` — full gruvbox dark palette
+- `gruvbox-light.itermcolors` — full gruvbox light palette
+
+To import: iTerm2 Preferences → Profiles → [Profile] → Colors → Color Presets… → Import…
+
 ## Adding a new dotfile
 
 1. Move the file into the appropriate place in this repo
