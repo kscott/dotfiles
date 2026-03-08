@@ -1,0 +1,250 @@
+" =============================================================================
+" Plugins
+" =============================================================================
+set rtp+=/opt/homebrew/opt/fzf
+
+call plug#begin('~/.vim/plugged')
+
+" Navigation
+Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
+Plug 'junegunn/fzf.vim'
+Plug 'preservim/nerdtree', { 'on': 'NERDTreeToggle' }
+
+" Editing
+Plug 'tpope/vim-surround'
+Plug 'tpope/vim-commentary'
+Plug 'tpope/vim-repeat'
+Plug 'tpope/vim-eunuch'
+Plug 'AndrewRadev/splitjoin.vim'
+Plug 'ntpeters/vim-better-whitespace'
+
+" Git
+Plug 'tpope/vim-fugitive'
+Plug 'tpope/vim-git'
+
+" Ruby
+Plug 'vim-ruby/vim-ruby', { 'for': 'ruby' }
+Plug 'tpope/vim-endwise'
+
+" JavaScript / TypeScript
+Plug 'pangloss/vim-javascript', { 'for': ['javascript', 'javascriptreact'] }
+Plug 'HerringtonDarkholme/yats.vim', { 'for': ['typescript', 'typescriptreact'] }
+
+" Markdown / Data
+Plug 'preservim/vim-markdown', { 'for': 'markdown' }
+Plug 'elzr/vim-json', { 'for': 'json' }
+
+" Colorschemes
+Plug 'NLKNguyen/papercolor-theme'
+Plug 'nanotech/jellybeans.vim'
+Plug 'morhetz/gruvbox'
+
+call plug#end()
+
+" =============================================================================
+" General
+" =============================================================================
+filetype plugin indent on
+syntax on
+scriptencoding utf-8
+
+set encoding=utf-8
+set history=1000
+set hidden
+set autowrite
+set nobackup
+set noswapfile
+set secure
+
+" Persistent undo
+if v:version >= 703
+    set undodir=$HOME/.vim/undo
+    set undofile
+    set undolevels=1000
+    set undoreload=10000
+endif
+
+set viminfo='50,<1000,s100,:0,n~/.vim/viminfo
+
+" Use ripgrep for :grep
+set grepprg=rg\ --vimgrep
+set grepformat=%f:%l:%c:%m
+
+" Extended % matching (built-in since Vim 8)
+packadd matchit
+
+" =============================================================================
+" UI
+" =============================================================================
+set background=dark
+colorscheme gruvbox
+
+set autoindent
+set backspace=indent,eol,start
+set clipboard=unnamed
+set colorcolumn=140
+set cursorline
+set fillchars=vert:\
+set ignorecase
+set hlsearch
+set incsearch
+set laststatus=2
+set lazyredraw
+set linespace=0
+set listchars=tab:▸\ ,eol:¬,trail:•
+set mouse=a
+set noequalalways
+set noexpandtab
+set nojoinspaces
+set nolist
+set noshowcmd
+set nostartofline
+set nowrap
+set number
+set relativenumber
+set scrolljump=5
+set scrolloff=3
+set shiftround
+set shiftwidth=4
+set shortmess+=filmnrxoOatIT
+set showmatch
+set showmode
+set smartcase
+set smarttab
+set softtabstop=4
+set synmaxcol=250
+set tabstop=4
+set tags=./tags,tags;$HOME
+set tildeop
+set ttimeoutlen=50
+set whichwrap=b,s,h,l,<,>,[,]
+set wildmode=list:longest,full
+set wildignore+=*.o,*.obj,.git,*.rbc,*.class,.svn
+set winminheight=0
+
+" =============================================================================
+" Statusline
+" =============================================================================
+set statusline=
+set statusline+=%02n\                       " buffer number
+set statusline+=%-40.80f\                   " filename (min 40, max 80)
+set statusline+=%h%m%r%w                    " help/modified/readonly/preview flags
+set statusline+=\ %{FugitiveStatusline()}   " git branch
+set statusline+=%=                          " right-align
+set statusline+=%{&ft!=''?&ft:'none'}\      " filetype
+set statusline+=%-10.(%l:%v%)\ %p%%         " line:col percentage
+
+" =============================================================================
+" Key Mappings
+" =============================================================================
+let mapleader=","
+let maplocalleader="\\"
+
+" Window navigation
+map <C-J> <C-W>j
+map <C-K> <C-W>k
+map <C-L> <C-W>l
+map <C-H> <C-W>h
+
+" Clear search highlight on Enter
+nnoremap <CR> :nohlsearch<CR>/<BS>
+
+" Visual indent
+vnoremap <Tab> >gv
+vnoremap <S-Tab> <gv
+
+" Yank to end of line (consistent with C and D)
+nnoremap Y y$
+
+" Select last pasted text
+nnoremap <expr> gp '`[' . strpart(getregtype(), 0, 1) . '`]'
+
+" Change working directory to current file
+noremap <silent><leader>cd :cd %:p:h<CR>
+
+" Move lines up/down
+nnoremap <M-S-Down> :m+<CR>==
+nnoremap <M-S-Up> :m-2<CR>==
+inoremap <M-S-Down> <Esc>:m+<CR>==gi
+inoremap <M-S-Up> <Esc>:m-2<CR>==gi
+vnoremap <M-S-Down> :m'>+<CR>gv=gv
+vnoremap <M-S-Up> :m-2<CR>gv=gv
+
+" Save a file you don't have permission to edit
+cnoremap w!! w !sudo tee % >/dev/null
+
+" Reformat paragraph
+map Q gq
+
+" Open tag definition in vertical split
+map <M-]> :vsp <CR>:exec("tag ".expand("<cword>"))<CR>
+
+" Show syntax highlight group under cursor (useful for colorscheme tweaking)
+map <F5> :echo "hi<" . synIDattr(synID(line("."),col("."),1),"name") . '> trans<'
+    \ . synIDattr(synID(line("."),col("."),0),"name") . "> lo<"
+    \ . synIDattr(synIDtrans(synID(line("."),col("."),1)),"name") . ">"<CR>
+
+" NERDTree
+map <C-n> :NERDTreeToggle<CR>
+
+" fzf: file finder (replaces ctrlp)
+nnoremap <C-p> :Files<CR>
+
+" fzf: ripgrep search (replaces ack)
+nnoremap <leader>/ :Rg<CR>
+
+" =============================================================================
+" Autocommands
+" =============================================================================
+if has("autocmd")
+    " Save and restore view state (folds, cursor position, etc.)
+    autocmd BufWinLeave * silent! mkview
+    autocmd BufWinEnter * silent! loadview
+
+    " Ruby: flag debugging statements as errors
+    augroup Ruby
+        autocmd!
+        autocmd BufEnter *.rb syn match error contained "\<binding.pry\>"
+        autocmd BufEnter *.rb syn match error contained "\<debugger\>"
+    augroup END
+
+    " Reload vimrc on save
+    autocmd BufWritePost vimrc nested source $MYVIMRC
+endif
+
+" =============================================================================
+" Plugin Settings
+" =============================================================================
+
+" fzf
+let g:fzf_layout = { 'down': '40%' }
+
+" NERDTree
+let g:NERDTreeShowHidden = 1
+
+" vim-better-whitespace
+let g:strip_whitespace_on_save = 1
+let g:strip_whitespace_confirm = 0
+
+" vim-markdown
+let g:vim_markdown_conceal = 0
+let g:vim_markdown_fenced_languages = ['ruby', 'javascript', 'typescript', 'bash=sh', 'json']
+
+" vim-json: don't conceal quotes
+let g:vim_json_syntax_conceal = 0
+
+" vim-ruby
+let g:ruby_indent_access_modifier_style = 'indent'
+let ruby_spellcheck_strings = 1
+
+" gruvbox: softer contrast (options: 'hard', 'medium', 'soft')
+let g:gruvbox_contrast_dark = 'medium'
+let g:gruvbox_contrast_light = 'soft'
+
+" vim-surround: ysiw# wraps word in #{} for Ruby string interpolation
+let g:surround_35 = "#{\r}"
+
+" Include local overrides if present
+if filereadable(expand("~/.vimrc.local"))
+    source ~/.vimrc.local
+endif

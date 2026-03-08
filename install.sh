@@ -38,6 +38,21 @@ mkdir -p $DOTFILES/zsh/cache
 echo "==> Creating secrets file (if missing)"
 [[ -f $DOTFILES/zsh/secrets.zsh ]] || cp $DOTFILES/zsh/secrets.zsh.example $DOTFILES/zsh/secrets.zsh 2>/dev/null || true
 
+echo "==> Linking vim config"
+link vim/vimrc .vimrc
+
+echo "==> Installing vim-plug (if missing)"
+if [[ ! -f $HOME/.vim/autoload/plug.vim ]]; then
+  curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
+    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+  echo "  installed vim-plug"
+else
+  echo "  ok  vim-plug already present"
+fi
+
+echo "==> Creating vim runtime directories"
+mkdir -p ~/.vim/{undo,backup,swap}
+
 echo ""
 echo "Done. Open a new shell to pick up the changes."
 echo ""
@@ -46,6 +61,8 @@ echo "  1. Run: gh auth login   (set up personal GitHub credentials)"
 echo "  2. Run: git config --global user.name  'Your Name'"
 echo "  3. Run: git config --global user.email 'you@example.com'"
 echo "  4. Add any personal tokens to ~/.zsh/secrets.zsh"
+echo "  5. Run: brew install fzf ripgrep  (if not already installed)"
+echo "  6. Open vim and run: :PlugInstall"
 echo ""
 if [[ -d $BACKUP ]]; then
   echo "Backed up old files to: $BACKUP"

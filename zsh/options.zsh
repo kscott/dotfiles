@@ -1,6 +1,6 @@
 export CLICOLOR=1
 export LSCOLORS="ExFxcxdxbxegedabagacad"
-export LS_COLORS="di=94:ln=95:so=32:pi=33:ex=31:bd=34;46:cd=34;43:su=0;41:sg=0;46:tw=0;42:ow=0;43:"
+export LS_COLORS="di=94:ln=95:so=32:pi=33:ex=91:bd=30;46:cd=30;43:su=30;41:sg=30;46:tw=30;42:ow=30;43:"
 
 # History
 HISTFILE=$HOME/.zsh_history
