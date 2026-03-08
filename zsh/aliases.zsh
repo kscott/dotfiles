@@ -26,3 +26,6 @@ alias ack=rg
 
 alias mdview='glow'
 alias mdv='glow'
+
+alias claude='/Users/ken/.local/bin/claude --continue'
+alias claude-new='/Users/ken/.local/bin/claude'
