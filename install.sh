@@ -22,6 +22,9 @@ link() {
   echo " link ~/$2 -> $src"
 }
 
+echo "==> Installing Homebrew packages"
+brew bundle --file="$DOTFILES/Brewfile"
+
 echo "==> Linking dotfiles"
 link zshenv   .zshenv
 link zprofile .zprofile
