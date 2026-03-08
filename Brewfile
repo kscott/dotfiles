@@ -14,6 +14,10 @@ brew "zsh-history-substring-search"
 brew "chruby"
 brew "ruby-install"
 
+# Git
+brew "delta"        # better git diff pager (used in gitconfig)
+# git-smart: install separately with: gem install git-smart
+
 # Search / navigation
 brew "fzf"
 brew "ripgrep"

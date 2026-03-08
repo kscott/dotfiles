@@ -41,6 +41,12 @@ mkdir -p $DOTFILES/zsh/cache
 echo "==> Creating secrets file (if missing)"
 [[ -f $DOTFILES/zsh/secrets.zsh ]] || cp $DOTFILES/zsh/secrets.zsh.example $DOTFILES/zsh/secrets.zsh 2>/dev/null || true
 
+echo "==> Linking git config"
+link git/gitconfig  .gitconfig
+link git/gitignore  .gitignore
+link git/githelpers .githelpers
+link git/gitmessage .gitmessage
+
 echo "==> Linking vim config"
 link vim/vimrc .vimrc
 
@@ -56,6 +62,34 @@ fi
 echo "==> Creating vim runtime directories"
 mkdir -p ~/.vim/{undo,backup,swap}
 
+echo "==> Setting up Ruby"
+CHRUBY_SH=""
+for _d in /opt/homebrew/share/chruby /usr/local/share/chruby; do
+  [[ -f $_d/chruby.sh ]] && CHRUBY_SH="$_d/chruby.sh" && break
+done
+
+if [[ -n $CHRUBY_SH ]]; then
+  source $CHRUBY_SH
+  if [[ -z "$(ls ~/.rubies/ 2>/dev/null)" ]]; then
+    echo "  Installing latest Ruby (this may take a few minutes)..."
+    ruby-install ruby
+  else
+    echo "  ok  rubies already present"
+  fi
+  latest_ruby=$(ls ~/.rubies/ | grep "^ruby-" | sort -V | tail -1)
+  if [[ -n $latest_ruby ]]; then
+    chruby $latest_ruby
+    echo $latest_ruby | sed 's/ruby-//' > ~/.ruby-version
+    echo "  Using $latest_ruby"
+    gem install git-smart --no-document
+  fi
+else
+  echo "  skipped (chruby not found — run brew bundle first)"
+fi
+
+echo "==> Installing vim plugins"
+vim +PlugUpdate +qall
+
 echo "==> Linking bin scripts"
 mkdir -p $HOME/bin
 link bin/claude-status.sh   bin/claude-status.sh
@@ -66,10 +100,7 @@ echo "Done. Open a new shell to pick up the changes."
 echo ""
 echo "Next steps:"
 echo "  1. Run: gh auth login   (set up personal GitHub credentials)"
-echo "  2. Run: git config --global user.name  'Your Name'"
-echo "  3. Run: git config --global user.email 'you@example.com'"
-echo "  4. Add any personal tokens to ~/.zsh/secrets.zsh"
-echo "  5. Open vim and run: :PlugInstall"
+echo "  2. Add any personal tokens to ~/.zsh/secrets.zsh"
 echo "  6. iTerm2: quit iTerm2, run: python3 ~/bin/fix-claude-iterm-colors.py, then relaunch"
 echo "     (patches Claude profile colors/font and registers gruvbox color presets)"
 echo "  7. Reminders CLI: gh repo clone kscott/reminders-cli ~/dev/reminders-cli && ~/dev/reminders-cli/reminders setup"
