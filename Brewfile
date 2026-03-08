@@ -24,5 +24,8 @@ brew "gh"
 # Apps
 cask "iterm2"
 
+# Fonts
+cask "font-jetbrains-mono-nerd-font"
+
 # JavaScript
 brew "node"

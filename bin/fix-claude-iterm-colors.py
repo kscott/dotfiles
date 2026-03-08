@@ -13,8 +13,12 @@ def color(r, g, b, a=1.0):
             "Alpha Component": a, "Color Space": "sRGB"}
 
 G = 0x28 / 255  # gruvbox dark background #282828
+FONT = "JetBrainsMonoNerdFontMono-Regular 14"
 
 PATCHES = {
+    # Font (Nerd Font Mono variant for starship icons)
+    "Normal Font":        FONT,
+    "Non Ascii Font":     FONT,
     # Gruvbox dark background
     "Background Color":   color(G, G, G),
     # Cursor text matches background
