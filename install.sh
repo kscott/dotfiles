@@ -46,6 +46,11 @@ mkdir -p ~/.ssh
 chmod 700 ~/.ssh
 link ssh/config .ssh/config
 
+echo "==> Linking tool configs"
+link gemrc      .gemrc
+link ripgreprc  .ripgreprc
+link rspec      .rspec
+
 echo "==> Linking git config"
 link git/gitconfig  .gitconfig
 link git/gitignore  .gitignore

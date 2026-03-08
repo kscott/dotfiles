@@ -1,0 +1,12 @@
+# Case-insensitive when pattern is all lowercase
+--smart-case
+
+# File type definitions (beyond ripgrep's built-ins)
+--type-add=haml:*.haml
+--type-add=scss:*.scss
+--type-add=sass:*.sass
+--type-add=coffee:*.coffee
+
+# Ignore common non-gitignored dirs
+--glob=!vendor/
+--glob=!.idea/

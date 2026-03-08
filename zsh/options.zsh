@@ -1,3 +1,5 @@
+export RIPGREP_CONFIG_PATH="$HOME/.ripgreprc"
+
 export CLICOLOR=1
 export LSCOLORS="ExFxcxdxbxegedabagacad"
 export LS_COLORS="di=94:ln=95:so=32:pi=33:ex=91:bd=30;46:cd=30;43:su=30;41:sg=30;46:tw=30;42:ow=30;43:"
