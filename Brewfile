@@ -21,5 +21,8 @@ brew "ripgrep"
 # GitHub
 brew "gh"
 
+# Apps
+cask "iterm2"
+
 # JavaScript
 brew "node"
