@@ -22,6 +22,9 @@ link() {
   echo " link ~/$2 -> $src"
 }
 
+echo "==> Creating standard directories"
+mkdir -p $HOME/dev $HOME/bin $HOME/Notes
+
 echo "==> Installing Homebrew packages"
 brew bundle --file="$DOTFILES/Brewfile"
 
