@@ -37,7 +37,9 @@ To apply iTerm2 colors on a new machine: quit iTerm2, run `python3 ~/bin/fix-cla
 - `gruvbox-dark.itermcolors` — full gruvbox dark palette
 - `gruvbox-light.itermcolors` — full gruvbox light palette
 
-To import: iTerm2 Preferences → Profiles → [Profile] → Colors → Color Presets… → Import…
+These are automatically registered by `fix-claude-iterm-colors.py` and will appear in the
+Color Presets dropdown without any manual import. Can also be imported manually via
+Preferences → Profiles → Colors → Color Presets… → Import…
 
 ## Adding a new dotfile
 

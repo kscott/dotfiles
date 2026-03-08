@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Patch the Claude iTerm2 profile colors in the preferences plist."""
+"""Patch the Claude iTerm2 profile colors and register color presets in the preferences plist."""
 
 import plistlib
 import shutil
 from pathlib import Path
+
+DOTFILES = Path(__file__).resolve().parent.parent
+PRESETS_DIR = DOTFILES / "iterm"
 
 PLIST = Path.home() / "Library/Preferences/com.googlecode.iterm2.plist"
 BACKUP = PLIST.with_suffix(".plist.bak")
@@ -56,6 +59,15 @@ for profile in profiles:
 if not patched:
     print("ERROR: Claude profile not found!")
     raise SystemExit(1)
+
+# Register .itermcolors files as color presets
+presets = data.setdefault("Custom Color Presets", {})
+for itermcolors in sorted(PRESETS_DIR.glob("*.itermcolors")):
+    with open(itermcolors, "rb") as f:
+        preset = plistlib.load(f)
+    name = itermcolors.stem
+    presets[name] = preset
+    print(f"Registered color preset: {name}")
 
 with open(PLIST, "wb") as f:
     plistlib.dump(data, f)
