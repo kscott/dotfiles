@@ -50,6 +50,7 @@ echo "==> Linking tool configs"
 link gemrc      .gemrc
 link ripgreprc  .ripgreprc
 link rspec      .rspec
+link doingrc    .doingrc
 
 echo "==> Linking git config"
 link git/gitconfig  .gitconfig
@@ -91,7 +92,7 @@ if [[ -n $CHRUBY_SH ]]; then
     chruby $latest_ruby
     echo $latest_ruby | sed 's/ruby-//' > ~/.ruby-version
     echo "  Using $latest_ruby"
-    gem install git-smart --no-document
+    gem install git-smart doing --no-document
   fi
 else
   echo "  skipped (chruby not found — run brew bundle first)"
