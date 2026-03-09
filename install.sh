@@ -110,6 +110,17 @@ fi
 echo "==> Installing vim plugins"
 vim +PlugUpdate +qall
 
+echo "==> Installing LaunchAgents"
+mkdir -p "$HOME/Library/LaunchAgents"
+for plist in $DOTFILES/launchagents/*.plist; do
+  name=$(basename $plist)
+  dst="$HOME/Library/LaunchAgents/$name"
+  cp $plist $dst
+  launchctl unload $dst 2>/dev/null || true
+  launchctl load $dst
+  echo "  loaded $name"
+done
+
 echo "==> Linking bin scripts"
 mkdir -p $HOME/bin
 link bin/claude-status.sh   bin/claude-status.sh

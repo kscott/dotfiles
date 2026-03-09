@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.kenscott.git-pull</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>-c</string>
+        <string>
+            cd ~/dotfiles && git pull --ff-only 2>&1;
+            cd ~/dev/reminders-cli && git pull --ff-only 2>&1
+        </string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/com.kenscott.git-pull.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/com.kenscott.git-pull.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>
