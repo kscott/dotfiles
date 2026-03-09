@@ -24,6 +24,7 @@ link() {
 
 echo "==> Creating standard directories"
 mkdir -p $HOME/dev $HOME/bin $HOME/Notes
+mkdir -p "$HOME/Library/Mobile Documents/com~apple~CloudDocs/Productivity"
 
 echo "==> Installing Homebrew packages"
 brew bundle --file="$DOTFILES/Brewfile"
@@ -53,7 +54,8 @@ echo "==> Linking tool configs"
 link gemrc      .gemrc
 link ripgreprc  .ripgreprc
 link rspec      .rspec
-link doingrc    .doingrc
+mkdir -p ~/.config/doing
+link config/doing/config.yml .config/doing/config.yml
 
 echo "==> Linking ~/.config"
 mkdir -p ~/.config

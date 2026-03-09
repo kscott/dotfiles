@@ -1,0 +1,98 @@
+---
+plugins:
+  plugin_path: "/Users/ken/.config/doing/plugins"
+  command_path: "/Users/ken/.config/doing/commands"
+  byday:
+    item_width: 60
+doing_file: "~/Library/Mobile Documents/com~apple~CloudDocs/Productivity/doing.md"
+current_section: Currently
+templates:
+  default:
+    date_format: "%Y-%m-%d %H:%M"
+    template: "%date | %title%note"
+    wrap_width: 0
+    order: asc
+  today:
+    date_format: "%_I:%M%P"
+    template: "%date: %title%note"
+    wrap_width: 0
+    order: asc
+  last:
+    date_format: "%-I:%M%P on %a"
+    template: "%title (at %date)%odnote"
+    wrap_width: 88
+  recent:
+    date_format: "%_I:%M%P"
+    template: "%shortdate: %title"
+    wrap_width: 88
+    count: 10
+    order: asc
+views:
+  sample:
+    date_format: "%_I:%M%P"
+    template: "%date | %title%note"
+    wrap_width: 0
+    section: section_name
+    count: 5
+  color:
+    date_format: "%F %_I:%M%P"
+    section: Currently
+    count: 10
+    wrap_width: 0
+    template: "%boldblack%date %boldgreen| %boldwhite%title%default%note"
+    order: asc
+  done:
+    date_format: "%_I:%M%P"
+    template: "%date | %title (%section)% 18: note"
+    wrap_width: 0
+    section: All
+    count: 0
+    order: desc
+    tags: done complete cancelled
+    tags_bool: OR
+marker_tag: flagged
+marker_color: red
+default_tags: []
+include_notes: true
+autotag:
+  whitelist: []
+  synonyms: {}
+editors:
+  default: 'true'
+  doing_file: MacVim
+  config:
+  pager:
+disabled_commands: []
+doing_file_sort: desc
+backup_dir: "~/.local/share/doing/doing_backup"
+history_size: 15
+paginate: false
+never_time: []
+never_finish: []
+date_tags:
+- defer(?:red)?
+- done
+- waiting
+budgets: {}
+timer_format: text
+interval_format: text
+order: asc
+shortdate_format:
+  today: "%_I:%M%P"
+  this_week: "%a %_I:%M%P"
+  this_month: "%m/%d %_I:%M%P"
+  older: "%m/%d/%y %_I:%M%P"
+export_templates:
+  dayone:
+  dayone-days:
+  dayone-entries:
+  html:
+  markdown:
+tag_sort: name
+search:
+  matching: pattern
+  distance: 3
+  case: smart
+  highlight: false
+interaction:
+  confirm_longer_than: 5h
