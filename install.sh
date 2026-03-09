@@ -13,7 +13,7 @@ link() {
       echo "  ok  ~/$2"
       return
     fi
-    mkdir -p $BACKUP
+    mkdir -p $BACKUP/$(dirname $2)
     mv $dst $BACKUP/$2
     echo "  bak ~/$2 -> $BACKUP/$2"
   fi
