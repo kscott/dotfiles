@@ -3,7 +3,7 @@
 # Core tools
 brew "git"
 brew "vim"
-brew "python"
+brew "python@3.14"
 
 # Shell
 brew "starship"
@@ -15,7 +15,7 @@ brew "chruby"
 brew "ruby-install"
 
 # Git
-brew "delta"        # better git diff pager (used in gitconfig)
+brew "git-delta"    # better git diff pager (used in gitconfig)
 # git-smart: install separately with: gem install git-smart
 
 # Search / navigation
@@ -31,7 +31,6 @@ brew "gh"
 cask "iterm2"
 
 # Fonts
-cask "font-jetbrains-mono"
 cask "font-jetbrains-mono-nerd-font"
 cask "font-fira-code"
 cask "font-fira-code-nerd-font"
