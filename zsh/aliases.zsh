@@ -27,5 +27,5 @@ alias ack=rg
 alias mdview='glow'
 alias mdv='glow'
 
-alias claude='/Users/ken/.local/bin/claude --continue'
-alias claude-new='/Users/ken/.local/bin/claude'
+alias claude='$HOME/.local/bin/claude --continue'
+alias claude-new='$HOME/.local/bin/claude'
