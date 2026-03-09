@@ -10,7 +10,14 @@
         <string>/bin/zsh</string>
         <string>-c</string>
         <string>
-            cd ~/dotfiles &amp;&amp; git pull --ff-only 2&gt;&amp;1;
+            cd ~/dotfiles
+            before=$(git rev-parse HEAD)
+            git pull --ff-only 2&gt;&amp;1
+            after=$(git rev-parse HEAD)
+            if [[ "$before" != "$after" ]]; then
+                echo "dotfiles updated — relinking and updating vim plugins..."
+                ~/dotfiles/update.sh 2&gt;&amp;1
+            fi
 
             cd ~/dev/reminders-cli
             before=$(git rev-parse HEAD)
