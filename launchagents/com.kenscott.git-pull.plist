@@ -10,8 +10,16 @@
         <string>/bin/zsh</string>
         <string>-c</string>
         <string>
-            cd ~/dotfiles && git pull --ff-only 2>&1;
-            cd ~/dev/reminders-cli && git pull --ff-only 2>&1
+            cd ~/dotfiles &amp;&amp; git pull --ff-only 2&gt;&amp;1;
+
+            cd ~/dev/reminders-cli
+            before=$(git rev-parse HEAD)
+            git pull --ff-only 2&gt;&amp;1
+            after=$(git rev-parse HEAD)
+            if [[ "$before" != "$after" ]]; then
+                echo "reminders-cli updated — rebuilding..."
+                ~/dev/reminders-cli/reminders setup 2&gt;&amp;1
+            fi
         </string>
     </array>
 
