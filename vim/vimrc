@@ -77,7 +77,7 @@ packadd matchit
 " UI
 " =============================================================================
 set background=dark
-colorscheme gruvbox
+silent! colorscheme gruvbox
 
 set autoindent
 set backspace=indent,eol,start
