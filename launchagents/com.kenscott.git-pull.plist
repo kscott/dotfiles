@@ -19,14 +19,17 @@
                 ~/dotfiles/update.sh 2&gt;&amp;1
             fi
 
-            cd ~/dev/reminders-cli
-            before=$(git rev-parse HEAD)
-            git pull --ff-only 2&gt;&amp;1
-            after=$(git rev-parse HEAD)
-            if [[ "$before" != "$after" ]]; then
-                echo "reminders-cli updated — rebuilding..."
-                ~/dev/reminders-cli/reminders setup 2&gt;&amp;1
-            fi
+            for tool in reminders-cli calendar-cli contacts-cli mail-cli sms-cli; do
+                cd ~/dev/$tool
+                before=$(git rev-parse HEAD)
+                git pull --ff-only 2&gt;&amp;1
+                after=$(git rev-parse HEAD)
+                if [[ "$before" != "$after" ]]; then
+                    name=${tool%-cli}
+                    echo "$tool updated — rebuilding..."
+                    ~/dev/$tool/$name setup 2&gt;&amp;1
+                fi
+            done
         </string>
     </array>
 
