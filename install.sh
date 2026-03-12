@@ -123,8 +123,12 @@ done
 
 echo "==> Linking bin scripts"
 mkdir -p $HOME/bin
-link bin/claude-status.sh   bin/claude-status.sh
+link bin/claude-status.sh          bin/claude-status.sh
 link bin/fix-claude-iterm-colors.py bin/fix-claude-iterm-colors.py
+link bin/sort-downloads.sh         bin/sort-downloads.sh
+link bin/transcribe                bin/transcribe
+link bin/trinity-reminders         bin/trinity-reminders
+link bin/plex-export               bin/plex-export
 
 echo ""
 echo "Done. Open a new shell to pick up the changes."
@@ -138,6 +142,15 @@ echo "       gh ssh-key add ~/.ssh/id_ed25519.pub --title \"\$(scutil --get Comp
 echo "  4. iTerm2: quit iTerm2, run: python3 ~/bin/fix-claude-iterm-colors.py, then relaunch"
 echo "     (patches Claude profile colors/font and registers gruvbox color presets)"
 echo "  5. Reminders CLI: gh repo clone kscott/reminders-cli ~/dev/reminders-cli && ~/dev/reminders-cli/reminders setup"
+echo "  6. Plex config: create ~/.config/plex/config with:"
+echo "       PLEX_SERVER=http://<plex-ip>:32400"
+echo "       PLEX_TOKEN=<token>"
+echo "       PLEX_SECTION_MOVIES=<section-id>"
+echo "       PLEX_SECTION_TV=<section-id>"
+echo "       PLEX_SECTION_MUSIC=<section-id>"
+echo "     (token: on Plex Mac run: defaults read com.plexapp.plexmediaserver PlexOnlineToken)"
+echo "  7. SSH to Plex: add 'Host plex' entry to ~/.ssh/config pointing to Plex machine IP"
+echo "     then copy key: ssh-copy-id -i ~/.ssh/id_ed25519.pub ken@<plex-ip>"
 echo ""
 if [[ -d $BACKUP ]]; then
   echo "Backed up old files to: $BACKUP"

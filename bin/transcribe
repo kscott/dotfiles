@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# transcribe — transcribe a video or audio file using whisper.cpp
+#
+# Usage:
+#   transcribe <file>
+#
+# Output: <filename>.txt alongside the original file
+# Video files (mp4, mov, m4v) are automatically converted via ffmpeg.
+
+set -euo pipefail
+
+if [[ $# -eq 0 ]]; then
+    echo "Usage: transcribe <file>"
+    exit 1
+fi
+
+FILE="$1"
+
+if [[ ! -f "$FILE" ]]; then
+    echo "Error: file not found: $FILE"
+    exit 1
+fi
+
+MODEL="$HOME/.whisper/ggml-medium.en.bin"
+
+if [[ ! -f "$MODEL" ]]; then
+    echo "Error: model not found at $MODEL"
+    exit 1
+fi
+
+DIR="$(dirname "$FILE")"
+BASE="$(basename "${FILE%.*}")"
+OUT="$DIR/$BASE.txt"
+EXT="${FILE##*.}"
+
+# For video files, extract audio to a temp wav first
+INPUT="$FILE"
+TMPWAV=""
+case "${EXT,,}" in
+    mp4|mov|m4v|mkv|avi)
+        TMPWAV="/tmp/transcribe_$$.wav"
+        echo "Extracting audio from $FILE..."
+        ffmpeg -i "$FILE" -ar 16000 -ac 1 -c:a pcm_s16le "$TMPWAV" -y -loglevel error
+        INPUT="$TMPWAV"
+        ;;
+esac
+
+echo "Transcribing: $FILE"
+whisper-cli -m "$MODEL" -f "$INPUT" -otxt --output-file "$DIR/$BASE" 2>&1 | grep -v "^$" | grep -v "whisper_\|ggml_\|main:\|system_info\|\["
+
+[[ -n "$TMPWAV" ]] && rm -f "$TMPWAV"
+
+echo "Saved: $OUT"

@@ -3,6 +3,12 @@ Host *
   UseKeychain yes
   IdentityFile ~/.ssh/id_rsa
 
+Host plex
+  HostName 192.168.0.34
+  User ken
+  IdentityFile ~/.ssh/id_ed25519
+  IdentitiesOnly yes
+
 Host github.com
   HostName github.com
   User git

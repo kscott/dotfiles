@@ -1,0 +1,67 @@
+#!/bin/bash
+# plex-export — export Plex library lists to CSV files on the Desktop
+#
+# Config: ~/.config/plex/config
+# Output: ~/Desktop/plex-movies.csv, plex-tvshows.csv, plex-music.csv
+#
+# If the token expires, update PLEX_TOKEN in ~/.config/plex/config.
+# To find a new token: on the Plex server Mac, run:
+#   defaults read com.plexapp.plexmediaserver PlexOnlineToken
+
+CONFIG="$HOME/.config/plex/config"
+[ -f "$CONFIG" ] || { echo "Error: config not found at $CONFIG"; exit 1; }
+source "$CONFIG"
+
+OUT="$HOME/Desktop"
+
+echo "Connecting to $PLEX_SERVER..."
+
+# Test connection
+if ! curl -sf "$PLEX_SERVER/identity?X-Plex-Token=$PLEX_TOKEN" > /dev/null; then
+    echo "Error: cannot reach Plex server. Is the Mac Mini on?"
+    echo "If the token expired, update PLEX_TOKEN in $CONFIG"
+    exit 1
+fi
+
+# Movies
+echo -n "  Exporting Movies... "
+curl -s "$PLEX_SERVER/library/sections/$PLEX_SECTION_MOVIES/all?X-Plex-Token=$PLEX_TOKEN" | python3 -c "
+import xml.etree.ElementTree as ET, sys, csv
+root = ET.fromstring(sys.stdin.read())
+rows = [[v.get('title',''), v.get('year',''), v.get('contentRating',''),
+         v.get('audienceRating',''), v.get('studio','')] for v in root.findall('Video')]
+rows.sort(key=lambda r: r[0].lower())
+w = csv.writer(sys.stdout)
+w.writerow(['Title','Year','Rating','Audience Score','Studio'])
+w.writerows(rows)
+" > "$OUT/plex-movies.csv"
+echo "$(tail -n +2 "$OUT/plex-movies.csv" | wc -l | tr -d ' ') movies → $OUT/plex-movies.csv"
+
+# TV Shows
+echo -n "  Exporting TV Shows... "
+curl -s "$PLEX_SERVER/library/sections/$PLEX_SECTION_TV/all?X-Plex-Token=$PLEX_TOKEN" | python3 -c "
+import xml.etree.ElementTree as ET, sys, csv
+root = ET.fromstring(sys.stdin.read())
+rows = [[d.get('title',''), d.get('year',''), d.get('contentRating',''),
+         d.get('childCount',''), d.get('leafCount','')] for d in root.findall('Directory')]
+rows.sort(key=lambda r: r[0].lower())
+w = csv.writer(sys.stdout)
+w.writerow(['Title','Year','Rating','Seasons','Episodes'])
+w.writerows(rows)
+" > "$OUT/plex-tvshows.csv"
+echo "$(tail -n +2 "$OUT/plex-tvshows.csv" | wc -l | tr -d ' ') TV shows → $OUT/plex-tvshows.csv"
+
+# Music
+echo -n "  Exporting Music... "
+curl -s "$PLEX_SERVER/library/sections/$PLEX_SECTION_MUSIC/all?X-Plex-Token=$PLEX_TOKEN" | python3 -c "
+import xml.etree.ElementTree as ET, sys, csv
+root = ET.fromstring(sys.stdin.read())
+rows = [[d.get('title',''), d.get('childCount',''), d.get('leafCount','')] for d in root.findall('Directory')]
+rows.sort(key=lambda r: r[0].lower())
+w = csv.writer(sys.stdout)
+w.writerow(['Artist','Albums','Tracks'])
+w.writerows(rows)
+" > "$OUT/plex-music.csv"
+echo "$(tail -n +2 "$OUT/plex-music.csv" | wc -l | tr -d ' ') artists → $OUT/plex-music.csv"
+
+echo "Done."

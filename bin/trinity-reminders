@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+# trinity-reminders — create Trinity Council prep reminders for upcoming months
+#
+# Meeting:   Last Thursday of the month
+# Reminder 1: Monday before the meeting — gather and distribute agenda + docs
+# Reminder 2: Tuesday two weeks before — coordinate with staff for online/bulletin posting
+#
+# Usage:
+#   trinity-reminders          # create reminders for next 3 months
+#   trinity-reminders 6        # create reminders for next 6 months
+
+import subprocess, sys
+from datetime import date, timedelta
+import calendar
+
+def last_thursday(year, month):
+    """Return the date of the last Thursday in the given month."""
+    last_day = calendar.monthrange(year, month)[1]
+    d = date(year, month, last_day)
+    # Walk back to Thursday (weekday 3)
+    while d.weekday() != 3:
+        d -= timedelta(days=1)
+    return d
+
+def fmt(d):
+    return d.strftime("%Y-%m-%d")
+
+def create_reminder(title, list_name, due_date, time=None):
+    date_str = f"{fmt(due_date)} {time}" if time else fmt(due_date)
+    result = subprocess.run(
+        ["reminders", "create", title, list_name, date_str],
+        capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        print(f"  ✓ {due_date.strftime('%b %-d')}  {title}")
+    else:
+        print(f"  ✗ Failed: {title} — {result.stderr.strip()}")
+
+months = int(sys.argv[1]) if len(sys.argv) > 1 else 3
+today = date.today()
+
+print(f"Creating Trinity Council reminders for next {months} months...\n")
+
+for i in range(months):
+    month = (today.month - 1 + i) % 12 + 1
+    year = today.year + (today.month - 1 + i) // 12
+
+    meeting = last_thursday(year, month)
+    agenda_day = meeting - timedelta(days=3)       # Monday before
+    staff_day  = meeting - timedelta(days=16)      # Tuesday ~2 weeks before
+
+    if meeting < today:
+        continue
+
+    print(f"--- {meeting.strftime('%B %Y')} (meeting {meeting.strftime('%b %-d')}) ---")
+
+    mon = meeting.strftime("%b")
+
+    if staff_day >= today:
+        create_reminder(
+            f"Trinity Council — coordinate with staff for online and bulletin posting for {mon}",
+            "Trinity Council",
+            staff_day,
+            time="3:30pm"
+        )
+    else:
+        print(f"  skipped staff reminder ({fmt(staff_day)} already past)")
+
+    if agenda_day >= today:
+        create_reminder(
+            f"Trinity Council — gather and distribute agenda and supporting documents for {mon}",
+            "Trinity Council",
+            agenda_day,
+            time="8:30pm"
+        )
+    else:
+        print(f"  skipped agenda reminder ({fmt(agenda_day)} already past)")
+
+print("\nDone.")
