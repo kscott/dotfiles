@@ -4,10 +4,34 @@ set -e
 DOTFILES="$HOME/dotfiles"
 BACKUP="$HOME/.dotfiles_backup_$(date +%Y%m%d_%H%M%S)"
 
+# ── Machine type ───────────────────────────────────────────────────────────────
+
+if [[ $1 == "personal" ]]; then
+  MACHINE="personal"
+elif [[ $1 == "work" ]]; then
+  MACHINE="work"
+else
+  echo "What kind of machine is this?"
+  echo "  1) Personal"
+  echo "  2) Work"
+  printf "Choice: "
+  read choice
+  case $choice in
+    1) MACHINE="personal" ;;
+    2) MACHINE="work" ;;
+    *) echo "Unknown choice — defaulting to work"; MACHINE="work" ;;
+  esac
+fi
+
+echo ""
+echo "Installing for: $MACHINE Mac"
+echo ""
+
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
 link() {
   local src="$DOTFILES/$1" dst="$HOME/$2"
 
-  # If destination exists and is not already our symlink, back it up
   if [[ -e $dst || -L $dst ]]; then
     if [[ -L $dst && $(readlink $dst) == $src ]]; then
       echo "  ok  ~/$2"
@@ -22,11 +46,13 @@ link() {
   echo " link ~/$2 -> $src"
 }
 
+# ── Core setup (all machines) ──────────────────────────────────────────────────
+
 echo "==> Creating standard directories"
 mkdir -p $HOME/dev $HOME/bin $HOME/Notes
 mkdir -p "$HOME/Library/Mobile Documents/com~apple~CloudDocs/Productivity"
 
-echo "==> Installing Homebrew packages"
+echo "==> Installing Homebrew packages (core)"
 brew bundle --file="$DOTFILES/Brewfile"
 
 echo "==> Linking dotfiles"
@@ -121,36 +147,53 @@ for plist in $DOTFILES/launchagents/*.plist; do
   echo "  loaded $name"
 done
 
-echo "==> Linking bin scripts"
-mkdir -p $HOME/bin
-link bin/claude-status.sh          bin/claude-status.sh
-link bin/fix-claude-iterm-colors.py bin/fix-claude-iterm-colors.py
-link bin/sort-downloads.sh         bin/sort-downloads.sh
-link bin/transcribe                bin/transcribe
-link bin/trinity-reminders         bin/trinity-reminders
-link bin/plex-export               bin/plex-export
+# ── Personal setup ─────────────────────────────────────────────────────────────
+
+if [[ $MACHINE == "personal" ]]; then
+  echo "==> Installing Homebrew packages (personal)"
+  brew bundle --file="$DOTFILES/Brewfile.personal"
+
+  echo "==> Linking bin scripts"
+  mkdir -p $HOME/bin
+  link bin/claude-status.sh           bin/claude-status.sh
+  link bin/fix-claude-iterm-colors.py bin/fix-claude-iterm-colors.py
+  link bin/transcribe                 bin/transcribe
+  link bin/sort-downloads.sh          bin/sort-downloads.sh
+  link bin/trinity-reminders          bin/trinity-reminders
+  link bin/plex-export                bin/plex-export
+fi
+
+# ── Next steps ─────────────────────────────────────────────────────────────────
 
 echo ""
 echo "Done. Open a new shell to pick up the changes."
 echo ""
-echo "Next steps:"
-echo "  1. Run: gh auth login   (set up personal GitHub credentials)"
+echo "Next steps (all machines):"
+echo "  1. Run: gh auth login"
 echo "  2. Add any personal tokens to ~/.zsh/secrets.zsh"
-echo "  3. Set up SSH key for this machine:"
+echo "  3. Set up SSH key:"
 echo "       ssh-keygen -t ed25519 -C 'ken@optikos.net'"
 echo "       gh ssh-key add ~/.ssh/id_ed25519.pub --title \"\$(scutil --get ComputerName)\""
 echo "  4. iTerm2: quit iTerm2, run: python3 ~/bin/fix-claude-iterm-colors.py, then relaunch"
-echo "     (patches Claude profile colors/font and registers gruvbox color presets)"
 echo "  5. Reminders CLI: gh repo clone kscott/reminders-cli ~/dev/reminders-cli && ~/dev/reminders-cli/reminders setup"
-echo "  6. Plex config: create ~/.config/plex/config with:"
-echo "       PLEX_SERVER=http://<plex-ip>:32400"
-echo "       PLEX_TOKEN=<token>"
-echo "       PLEX_SECTION_MOVIES=<section-id>"
-echo "       PLEX_SECTION_TV=<section-id>"
-echo "       PLEX_SECTION_MUSIC=<section-id>"
-echo "     (token: on Plex Mac run: defaults read com.plexapp.plexmediaserver PlexOnlineToken)"
-echo "  7. SSH to Plex: add 'Host plex' entry to ~/.ssh/config pointing to Plex machine IP"
-echo "     then copy key: ssh-copy-id -i ~/.ssh/id_ed25519.pub ken@<plex-ip>"
+
+if [[ $MACHINE == "personal" ]]; then
+  echo ""
+  echo "Next steps (personal Mac):"
+  echo "  6. Plex config: create ~/.config/plex/config with:"
+  echo "       PLEX_SERVER=http://<plex-ip>:32400"
+  echo "       PLEX_TOKEN=<token>"
+  echo "       PLEX_SECTION_MOVIES=<section-id>"
+  echo "       PLEX_SECTION_TV=<section-id>"
+  echo "       PLEX_SECTION_MUSIC=<section-id>"
+  echo "     (token: on Plex Mac run: defaults read com.plexapp.plexmediaserver PlexOnlineToken)"
+  echo "  7. SSH to Plex: add 'Host plex' to ~/.ssh/config, then:"
+  echo "       ssh-copy-id -i ~/.ssh/id_ed25519.pub ken@<plex-ip>"
+  echo "  8. Transmission: Preferences → Transfers → Management →"
+  echo "       'Call script when torrent is complete' → ~/bin/sort-downloads.sh"
+  echo "  9. whisper model: place ggml-medium.en.bin at ~/.whisper/"
+fi
+
 echo ""
 if [[ -d $BACKUP ]]; then
   echo "Backed up old files to: $BACKUP"

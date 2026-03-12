@@ -41,10 +41,5 @@ cask "font-fira-sans"
 cask "font-source-code-pro"
 cask "font-source-sans-3"
 
-# Audio / media
-brew "shntool"      # shnsplit — split cue+FLAC into tracks
-brew "cuetools"     # cuetag.sh — tag split FLAC tracks from cue sheet
-brew "pandoc"       # markdown → HTML (used for PDF generation)
-
 # JavaScript
 brew "node"

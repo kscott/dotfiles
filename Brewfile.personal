@@ -1,0 +1,12 @@
+# Personal Mac extras — install with: brew bundle --file=Brewfile.personal
+# Run after Brewfile (core) is installed.
+
+# Audio / media
+brew "shntool"      # shnsplit — split cue+FLAC into tracks
+brew "cuetools"     # cuetag.sh — tag split FLAC tracks from cue sheet
+brew "pandoc"       # markdown → HTML (used for PDF generation)
+brew "ffmpeg"       # audio/video processing (used by transcribe)
+
+# Transcription
+# whisper-cli: install from source — see https://github.com/ggerganov/whisper.cpp
+# Model: ~/.whisper/ggml-medium.en.bin
