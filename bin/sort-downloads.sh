@@ -1,7 +1,14 @@
 #!/bin/bash
 # sort-downloads.sh — Route completed downloads to the right inbox
 # Usage: sort-downloads.sh <path>
-#   Called by Hazel when a new item appears in the Torrent Downloads folder.
+#   Called by Transmission when a torrent completes (Preferences → Transfers → Management).
+#
+# If the Plex machine IP changes (e.g. after a reboot):
+#   1. Find new IP on Plex machine: ipconfig getifaddr en0
+#   2. Update ~/.ssh/config — change HostName under "Host plex"
+#   3. Clear the old host key: ssh-keygen -R <old-ip>
+#   4. Reconnect: ssh -o StrictHostKeyChecking=accept-new plex 'echo ok'
+#   (Long-term fix: assign a static IP to the Plex machine in your router's DHCP settings)
 
 CALIBREDB="/Applications/calibre.app/Contents/MacOS/calibredb"
 VIDEO_INBOX="/Volumes/Media/Inbox"
@@ -10,15 +17,14 @@ LOG="$HOME/Library/Logs/sort-downloads.log"
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 
-# Trim log entries older than 30 days
+# Trim log entries older than 30 days (truncate in place to preserve tail -f)
 if [[ -f "$LOG" ]]; then
     cutoff=$(date -v-30d '+%Y-%m-%d')
-    grep -v "^\[" "$LOG" > /tmp/sort-log-nondate.tmp
-    awk -v cutoff="$cutoff" '
+    trimmed=$(awk -v cutoff="$cutoff" '
         /^\[/ { if (substr($0,2,10) >= cutoff) print; next }
         { print }
-    ' "$LOG" > /tmp/sort-log-trimmed.tmp
-    mv /tmp/sort-log-trimmed.tmp "$LOG"
+    ' "$LOG")
+    printf '%s\n' "$trimmed" > "$LOG"
 fi
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG"; }
