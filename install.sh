@@ -51,6 +51,7 @@ link() {
 echo "==> Creating standard directories"
 mkdir -p $HOME/dev $HOME/bin $HOME/Notes
 mkdir -p "$HOME/Library/Mobile Documents/com~apple~CloudDocs/Productivity"
+[[ -L $HOME/iCloud ]] || ln -s "$HOME/Library/Mobile Documents/com~apple~CloudDocs" $HOME/iCloud
 
 echo "==> Installing Homebrew packages (core)"
 brew bundle --file="$DOTFILES/Brewfile"
