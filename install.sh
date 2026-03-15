@@ -162,6 +162,16 @@ if [[ $MACHINE == "personal" ]]; then
       && echo "  _${tool}" || echo "  failed: _${tool}"
   done
 
+  echo "==> Linking Get Clear dev builds (if repos present)"
+  mkdir -p "$HOME/bin"
+  for tool in reminders calendar contacts mail sms; do
+    src="$HOME/dev/${tool}-cli/.build/release/${tool}-bin"
+    if [[ -f "$src" ]]; then
+      ln -sf "$src" "$HOME/bin/$tool"
+      echo "  linked $tool"
+    fi
+  done
+
   echo "==> Linking bin scripts"
   mkdir -p $HOME/bin
   link bin/claude-status.sh           bin/claude-status.sh
