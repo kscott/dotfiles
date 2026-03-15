@@ -8,6 +8,7 @@ Host plex
   User ken
   IdentityFile ~/.ssh/id_ed25519
   IdentitiesOnly yes
+  KexAlgorithms -mlkem768x25519-sha256
 
 Host github.com
   HostName github.com
