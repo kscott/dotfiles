@@ -98,7 +98,7 @@ handle_music() {
     fi
 
     log "Triggering beet import on plex"
-    ssh plex '/usr/local/bin/beet import -q -I /Volumes/Music/Inbox' >> "$LOG" 2>&1
+    ssh plex 'PATH=/usr/local/bin:$PATH /usr/local/bin/beet import -q -I /Volumes/Music/Inbox' >> "$LOG" 2>&1
 }
 
 handle_video() {
