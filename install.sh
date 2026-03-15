@@ -154,6 +154,14 @@ if [[ $MACHINE == "personal" ]]; then
   echo "==> Installing Homebrew packages (personal)"
   brew bundle --file="$DOTFILES/Brewfile.personal"
 
+  echo "==> Installing Get Clear zsh completions"
+  mkdir -p "$HOME/.local/share/zsh/site-functions"
+  for tool in reminders calendar contacts mail sms; do
+    curl -fsSL -o "$HOME/.local/share/zsh/site-functions/_${tool}" \
+      "https://raw.githubusercontent.com/kscott/get-clear/main/completions/_${tool}" 2>/dev/null \
+      && echo "  _${tool}" || echo "  failed: _${tool}"
+  done
+
   echo "==> Linking bin scripts"
   mkdir -p $HOME/bin
   link bin/claude-status.sh           bin/claude-status.sh

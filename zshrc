@@ -1,5 +1,5 @@
-# Brew completions (hardcoded path avoids slow `brew --prefix` call)
-FPATH=/opt/homebrew/share/zsh/site-functions:$FPATH
+# Completions — local user dir first, then Homebrew
+FPATH=~/.local/share/zsh/site-functions:/opt/homebrew/share/zsh/site-functions:$FPATH
 autoload -Uz compinit
 compinit
 
