@@ -4,7 +4,7 @@ autoload -Uz compinit
 compinit
 
 # Source zsh modules
-for _f in aliases functions options; do
+for _f in aliases functions options ibotta; do
   [[ -f $HOME/.zsh/$_f.zsh ]] && source $HOME/.zsh/$_f.zsh
 done
 unset _f
