@@ -1,0 +1,5 @@
+# Ken Scott — crontab
+# Managed by dotfiles/install.sh — edit here, not with crontab -e
+
+# Weekly Homebrew + gem update — Saturday 9:07am
+7 9 * * 6 $HOME/bin/brew-update.sh

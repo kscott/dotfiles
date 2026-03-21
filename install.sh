@@ -141,6 +141,10 @@ fi
 echo "==> Installing vim plugins"
 vim +PlugUpdate +qall
 
+echo "==> Installing crontab"
+crontab $DOTFILES/crontab
+echo "  installed"
+
 echo "==> Installing LaunchAgents"
 mkdir -p "$HOME/Library/LaunchAgents"
 for plist in $DOTFILES/launchagents/*.plist; do
@@ -178,6 +182,7 @@ if [[ $MACHINE == "personal" ]]; then
 
   echo "==> Linking bin scripts"
   mkdir -p $HOME/bin
+  link bin/brew-update.sh             bin/brew-update.sh
   link bin/claude-status.sh           bin/claude-status.sh
   link bin/fix-claude-iterm-colors.py bin/fix-claude-iterm-colors.py
   link bin/transcribe                 bin/transcribe
