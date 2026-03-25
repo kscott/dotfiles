@@ -121,8 +121,7 @@ handle_video() {
         cp -r "$path" "$VIDEO_INBOX/" && log "  Copied"
     fi
 
-    log "Triggering sorttv on plex"
-    ssh plex 'cd ~ && /usr/local/bin/perl bin/sorttv/sorttv.pl' >> "$LOG" 2>&1
+    log "Copied — sorttv will pick up via cron"
 }
 
 # ── Main ───────────────────────────────────────────────────────────────────────
