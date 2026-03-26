@@ -17,10 +17,13 @@ Evaluates sprint capacity and completion likelihood for the Content Squad (TACO 
 
 - **Sprint length:** 2 weeks
 - **Team size:** 6 engineers (Shelbey, Jasmine, Miranda, Nate, Brian, Matt)
-- **Typical velocity:** ~40–50 points per sprint (adjust based on actuals)
+- **Typical velocity:** **48–51 pts/sprint** (sprint-committed work, from Sprints 15–20 actuals)
+  - Full range: 29–61 pts; Sprint 17 (29 pts) is a known outlier — holiday/shortened sprint
+  - Use 48–51 as the planning baseline; flag if current sprint is <35 or >55
+  - Run `/sprint-velocity` to refresh this baseline before planning reviews
 - **Capacity reducers:** PTO, on-call rotation, recurring meetings, holidays
 
-These are defaults — always check the actual sprint data and adjust for the current sprint's known absences.
+Always check the actual sprint data and adjust for the current sprint's known absences.
 
 ---
 
@@ -73,7 +76,8 @@ Effective capacity in points = available capacity / avg hours per point
 ```
 
 Flag if:
-- Total committed points > 110% of typical velocity → **overcommitted**
+- Total committed points > 55 pts (~110% of 51 baseline) → **overcommitted**
+- Total committed points < 35 pts → **underloaded** — confirm intentional or pull from backlog
 - More than 20% of stories are unpointed → **hidden risk**
 - Any single engineer carries >40% of the sprint points → **concentration risk**
 - On-call engineer has a full sprint load → **on-call squeeze**
