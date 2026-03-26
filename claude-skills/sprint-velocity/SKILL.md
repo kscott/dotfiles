@@ -75,6 +75,7 @@ acli jira workitem search \
          AND issuetype in (Story, Bug, Task)
          AND summary !~ \"Renovate\"
          AND summary !~ \"Automated PR\"
+         AND summary !~ \"Dependabot\"
          AND assignee in (
            shelbey.summers@ibotta.com,
            jasmine.hamou@ibotta.com,
