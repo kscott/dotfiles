@@ -73,6 +73,7 @@ acli jira workitem search \
          AND resolutiondate >= \"YYYY-MM-DD\"
          AND resolutiondate <= \"YYYY-MM-DD\"
          AND issuetype in (Story, Bug, Task)
+         AND summary !~ \"Renovate\"
          AND assignee in (
            shelbey.summers@ibotta.com,
            jasmine.hamou@ibotta.com,
