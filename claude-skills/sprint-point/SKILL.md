@@ -41,27 +41,40 @@ Suggests story point values for unpointed Jira stories using the Content Squad r
 If the user specifies a sprint or provides story keys, use those.
 Otherwise, fetch unpointed stories from the TACO project:
 
+**Important:** `acli search` does not support custom fields in `--fields`. Use `--json` and parse
+the returned list. To get description or story points, follow up with `view` per item.
+
 ```bash
+# Unpointed stories (backlog + active, not done)
+# "Story Points" is EMPTY works in JQL even though it can't be in --fields
 acli jira workitem search \
   --jql "project = TACO AND issuetype = Story AND \"Story Points\" is EMPTY AND statusCategory != Done" \
-  --fields "key,summary,status,assignee,description" \
-  --limit 20
+  --fields "key,summary,status,assignee" \
+  --limit 20 --json
+```
+
+The result is a JSON **list**. For each key, fetch full details:
+```bash
+acli jira workitem view TACO-XXXX --fields "*all" --json
+# description is in fields.description (Atlassian Document Format — extract .content[].content[].text)
+# story points: customfield_10033 (null = unpointed)
+# sprint: customfield_10008 (list of sprint objects with name, startDate, endDate)
 ```
 
 For a specific sprint:
 ```bash
 acli jira workitem search \
   --jql "project = TACO AND issuetype = Story AND sprint in openSprints() AND \"Story Points\" is EMPTY" \
-  --fields "key,summary,status,assignee,description" \
-  --limit 20
+  --fields "key,summary,status,assignee" \
+  --limit 20 --json
 ```
 
 For a specific epic:
 ```bash
 acli jira workitem search \
   --jql "project = TACO AND issuetype = Story AND \"Epic Link\" = TACO-XXXX AND \"Story Points\" is EMPTY" \
-  --fields "key,summary,status,assignee,description" \
-  --limit 20
+  --fields "key,summary,status,assignee" \
+  --limit 20 --json
 ```
 
 ### 2. Analyze each story

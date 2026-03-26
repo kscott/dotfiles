@@ -28,21 +28,27 @@ These are defaults — always check the actual sprint data and adjust for the cu
 
 ### 1. Fetch the sprint
 
+**Important:** `acli search` does not support custom fields (including story points) in `--fields`.
+Fetch issue metadata first, then pull story points and sprint dates per-item via `view`.
+
 ```bash
-# Current open sprint
+# Step 1: Get all sprint items (metadata only)
 acli jira workitem search \
   --jql "project = TACO AND sprint in openSprints()" \
-  --fields "key,summary,status,assignee,story_points,issuetype" \
-  --limit 100
+  --fields "key,summary,status,assignee,issuetype" \
+  --limit 100 --json
 ```
 
-For a specific sprint by name:
+The `--json` flag returns a JSON **list** (not a dict). Parse keys from it, then fetch points:
+
 ```bash
-acli jira workitem search \
-  --jql "project = TACO AND sprint = 'Sprint Name Here'" \
-  --fields "key,summary,status,assignee,story_points,issuetype" \
-  --limit 100
+# Step 2: For each key, get story points (customfield_10033) and sprint dates (customfield_10008)
+acli jira workitem view TACO-XXXX --fields "*all" --json
+# customfield_10033 = story points (integer or null)
+# customfield_10008 = list of sprint objects with name, startDate, endDate, state
 ```
+
+For a specific sprint by name, use `sprint = 'Content Sprint NN'` in the JQL instead of `openSprints()`.
 
 ### 2. Build the picture
 
