@@ -53,7 +53,45 @@ acli jira workitem view TACO-XXXX --fields "*all" --json
 
 For a specific sprint by name, use `sprint = 'Content Sprint NN'` in the JQL instead of `openSprints()`.
 
-### 2. Build the picture
+### 2. Check the Content Squad calendar for absences
+
+Always pull the Content Squad calendar for the sprint window before assessing capacity.
+This is the authoritative source for OOO — don't rely on asking the user.
+
+```python
+from google_workspace import CalendarClient
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+tz = ZoneInfo("America/Denver")
+cal = CalendarClient(calendar_id="ibotta.com_51okdukrm1r3lifcvf0f187os8@group.calendar.google.com")
+events = cal.get_events(
+    start_date=datetime(YYYY, M, D, tzinfo=tz),
+    end_date=datetime(YYYY, M, D, tzinfo=tz)
+)
+```
+
+Run with:
+```bash
+uv run --with "google-workspace @ git+ssh://git@github.com/Ibotta/google-workspace-py.git" python3 -c "..."
+```
+
+From the calendar events, build a capacity table:
+
+| Engineer | OOO days | Working days available | Effective capacity |
+|----------|----------|----------------------|-------------------|
+| Miranda | 6 of 10 | 4 | ~40% |
+| Matt | 5 of 10 | 5 | ~50% |
+| Nate | 1 of 10 | 9 | ~90% |
+| Shelbey | 1 of 10 | 9 | ~90% |
+| Jasmine | 0 | 10 | 100% |
+| Brian | 0 | 10 | 100% |
+
+Flag engineers who are out for the majority of week 2 — their stories need to
+finish in week 1 or be handed off. Also note on-call: assume ~25–30% capacity
+reduction during their on-call week even if no OOO is shown.
+
+### 3. Build the picture
 
 Calculate:
 - **Total committed points** — sum of all pointed stories
@@ -62,22 +100,19 @@ Calculate:
   - Done / Closed
   - In Progress / In Review
   - Not started (Backlog / Selected for Development)
-- **Points by person** — is load distributed evenly or concentrated?
-- **On-call impact** — who is on call this sprint? Subtract ~25–30% of their capacity.
-
-### 3. Assess capacity
+- **Points by person** — cross-reference against calendar availability
+- **Adjusted capacity** — reduce each engineer's points proportionally to their OOO days
 
 ```
-Available capacity = (working days in sprint) × (team size) × 8h × 0.6
-  (0.6 = 60% of time available for sprint work after meetings, reviews, etc.)
-
-Effective capacity in points = available capacity / avg hours per point
-  (use 4h/point as a rough default; adjust if team velocity suggests otherwise)
+Adjusted points for engineer = assigned pts × (available days / 10)
+Adjusted sprint total = sum of all engineers' adjusted points
 ```
 
 Flag if:
 - Total committed points > 55 pts (~110% of 51 baseline) → **overcommitted**
 - Total committed points < 35 pts → **underloaded** — confirm intentional or pull from backlog
+- Adjusted total < committed total by >15% → **capacity gap** — OOO is material
+- Any engineer is OOO for week 2 with unstarted stories → **week-2 risk**
 - More than 20% of stories are unpointed → **hidden risk**
 - Any single engineer carries >40% of the sprint points → **concentration risk**
 - On-call engineer has a full sprint load → **on-call squeeze**
@@ -98,54 +133,66 @@ Also check: are there any stories with no movement since sprint start?
 
 ### 5. Deliver the assessment
 
-Present a concise summary:
-
 ```
 ## Sprint: [Sprint Name]
-**Period:** Mon Mar 23 – Fri Apr 5
+**Period:** Wed Mar 25 – Wed Apr 8
 
 ### Capacity
 | | Points |
 |---|---|
-| Committed | 47 |
-| Done | 18 |
-| In Progress | 14 |
-| Not Started | 15 |
-| Unpointed | 3 stories ⚠️ |
+| Committed | 28 |
+| Done | 0 |
+| Ready to Deploy | 1 |
+| In Progress | 13 |
+| Not Started | 14 |
+| Unpointed | 0 ✅ |
 
-### Load by Engineer
-| Engineer | Points | Notes |
-|----------|--------|-------|
-| Jasmine | 12 | On-call week 1 — effective capacity reduced |
-| Miranda | 9 | |
-| Shelbey | 8 | |
-| Nate | 8 | |
-| Brian | 6 | |
-| Matt | 4 | 3 stories unpointed |
+### Absences (from Content Squad calendar)
+| Engineer | OOO | Days lost | Impact |
+|----------|-----|-----------|--------|
+| Matt | Apr 2–15 | 5 of 10 | Stories must finish week 1 |
+| Miranda | Apr 3–4, Apr 6–11 | 6 of 10 | Stories must finish week 1 |
+| Nate | Mar 27 | 1 of 10 | Minimal |
+| Shelbey | Apr 3–4 | 1 of 10 | Minimal |
+
+### Load by Engineer (adjusted for OOO)
+| Engineer | Assigned | OOO adj. | Stories | Notes |
+|----------|----------|----------|---------|-------|
+| Jasmine | 6 | 6 | TACO-2788, TACO-3156 | |
+| Miranda | 6 | 2.4 ⚠️ | TACO-3887, TACO-3120 | Out week 2 — must start now |
+| Shelbey | 5 | 4.5 | TACO-3886 | |
+| Nate | 5 | 4.5 | TACO-3486 | |
+| Brian | 4 | 4 | TACO-3935, TACO-3789 | |
+| Matt | 2 | 1 ⚠️ | TACO-3942 | Out week 2 — must close this week |
+
+**Adjusted total: ~22 pts effective capacity vs 28 committed**
 
 ### Assessment
-🟡 **At Risk** — 47 points is within range but 3 unpointed stories add hidden risk.
-Jasmine's on-call load may slow progress on TACO-XXXX.
+🔴 **At Risk** — OOO reduces effective capacity by ~21%. Matt and Miranda
+together carry 8 pts with very limited week-2 availability.
 
 ### Risks
-- TACO-XXXX has not moved since sprint start — needs check-in
-- 3 Matt stories unpointed — run /sprint-point to size before mid-sprint
-- If unpointed stories average 5 pts, effective total is ~62 — overcommitted
+- TACO-3887 (Miranda, 5pts, not started) — she's out Apr 3 through end of sprint
+- TACO-3942 (Matt, carryover) — repeated deprioritization; must close this week
+- Effective capacity ~22 pts vs 28 committed if OOO holds
 
 ### Recommendation
-Drop one 8-point story to backlog, or confirm Matt's stories are small (≤2 pts each).
+Miranda should start TACO-3887 immediately; it needs to be in review by Apr 2.
+Matt needs to close TACO-3942 by Apr 1. Consider pulling TACO-3887 to next sprint
+if Miranda can't start it today.
 ```
 
 **Likelihood ratings:**
-- 🟢 **On Track** — committed ≤ velocity, good distribution, <10% unpointed
-- 🟡 **At Risk** — mild overcommit, unpointed stories, or concentrated load
-- 🔴 **At Risk / Overcommitted** — >120% velocity, significant unknowns, key engineer constrained
+- 🟢 **On Track** — committed ≤ adjusted capacity, good distribution, <10% unpointed
+- 🟡 **At Risk** — mild overcommit, unpointed stories, or moderate OOO impact
+- 🔴 **At Risk** — OOO materially reduces capacity, key stories unstarted, or carryover pattern
 
 ---
 
 ## Notes
 
-- Always ask about PTO or known absences before finalizing the assessment — calendar data helps but isn't always complete
+- Content Squad calendar ID: `ibotta.com_51okdukrm1f3lifcvf0f187os8@group.calendar.google.com`
 - On-call engineer: assume ~25–30% capacity reduction during their on-call week
 - Pair with `/sprint-point` to close the unpointed story gap before finalizing the assessment
+- Pair with `/sprint-velocity` to verify the baseline before sprint planning
 - Jira project: TACO | Ibotta instance: ibotta.atlassian.net
