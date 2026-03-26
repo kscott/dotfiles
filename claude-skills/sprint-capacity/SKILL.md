@@ -88,10 +88,47 @@ From the calendar events, build a capacity table:
 | Brian | 0 | 10 | 100% |
 
 Flag engineers who are out for the majority of week 2 — their stories need to
-finish in week 1 or be handed off. Also note on-call: assume ~25–30% capacity
-reduction during their on-call week even if no OOO is shown.
+finish in week 1 or be handed off.
 
-### 3. Build the picture
+### 3. Check PagerDuty for on-call assignments
+
+Pull the Content Squad Primary and Secondary schedules for the sprint window.
+On-call load is real work that reduces story capacity.
+
+```python
+PYTHONPATH="/Users/ken.scott/.claude/plugins/cache/ibotta/pagerduty-api/1.0.0/src"
+
+from pagerduty import SchedulesClient, PagerDutyConfig
+
+config = PagerDutyConfig.from_env()
+schedules = SchedulesClient(config)
+
+# Content Squad Primary: PUL2FDL  |  Secondary: PTY2TZH
+for sched_id, label in [('PUL2FDL', 'Primary'), ('PTY2TZH', 'Secondary')]:
+    result = schedules.get_schedule(
+        sched_id,
+        since='SPRINT_START',   # ISO 8601
+        until='SPRINT_END',
+        time_zone='America/Denver'
+    )
+    entries = result['schedule']['final_schedule']['rendered_schedule_entries']
+    for e in entries:
+        print(label, e['user']['summary'], e['start'][:10], '→', e['end'][:10])
+```
+
+Run with:
+```bash
+PYTHONPATH="/Users/ken.scott/.claude/plugins/cache/ibotta/pagerduty-api/1.0.0/src" \
+  uv run --with requests python3 -c "..."
+```
+
+Still pull both schedules for visibility, but only apply capacity reduction for **primary on-call**.
+Secondary is light — backup only, treat as full capacity.
+
+Apply **25–30% capacity reduction for primary on-call days**.
+An engineer on primary for a full week loses ~25% of that week's capacity.
+
+### 4. Build the picture
 
 Calculate:
 - **Total committed points** — sum of all pointed stories
