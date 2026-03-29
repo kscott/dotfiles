@@ -2,6 +2,6 @@
 {
   zcompdump="${ZDOTDIR:-$HOME}/.zcompdump"
   if [[ -s "$zcompdump" && (! -s "${zcompdump}.zwc" || "$zcompdump" -nt "${zcompdump}.zwc") ]]; then
-    zcompile "$zcompdump"
+    [[ -w "${zcompdump}.zwc" || ! -e "${zcompdump}.zwc" ]] && zcompile "$zcompdump"
   fi
 } &!
