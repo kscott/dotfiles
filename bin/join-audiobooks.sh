@@ -309,12 +309,10 @@ log "=== Flatten pass ==="
 FLATTENED=0
 
 while IFS= read -r m4b; do
-    local rel="${m4b#"$ARCHIVE/"}"
-    local depth
+    rel="${m4b#"$ARCHIVE/"}"
     depth=$(echo "$rel" | tr '/' '\n' | wc -l | tr -d ' ')
     [[ "$depth" -le 2 ]] && continue   # already at Author/Book.m4b
 
-    local author_dir book_name target
     author_dir="$ARCHIVE/$(echo "$rel" | cut -d/ -f1)"
     book_name=$(basename "$m4b")
     target="$author_dir/$book_name"
@@ -331,7 +329,6 @@ while IFS= read -r m4b; do
     (( FLATTENED++ )) || true
 
     # Remove now-empty parent folders (but not the author dir itself)
-    local parent
     parent=$(dirname "$m4b")
     while [[ "$parent" != "$author_dir" && "$parent" != "$ARCHIVE" ]]; do
         find "$parent" -name ".DS_Store" -delete 2>/dev/null
