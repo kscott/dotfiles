@@ -6,6 +6,8 @@ brew "shntool"      # shnsplit — split cue+FLAC into tracks
 brew "cuetools"     # cuetag.sh — tag split FLAC tracks from cue sheet
 brew "pandoc"       # markdown → HTML (used for PDF generation)
 brew "ffmpeg"       # audio/video processing (used by transcribe)
+brew "imagemagick"  # image processing — deskew scanned docs, etc.
+brew "ghostscript"  # PDF rendering (required by imagemagick for PDF input)
 
 # Transcription
 # whisper-cli: install from source — see https://github.com/ggerganov/whisper.cpp
