@@ -89,7 +89,7 @@ def fetch_itunes(title: str, author: str) -> dict:
     query = urllib.parse.quote(f"{title} {author}")
     url = (
         f"https://itunes.apple.com/search"
-        f"?term={query}&media=audiobook&entity=audiobook&limit=5"
+        f"?term={query}&media=audiobook&entity=audiobook&limit=5&country=us"
     )
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "fix-audiobook-meta/1.0"})

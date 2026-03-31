@@ -12,6 +12,7 @@ Structure handled:
   Author/Book/*.disc/        — .disc folder naming
 """
 
+import argparse
 import json
 import logging
 import re
@@ -106,7 +107,7 @@ def fetch_itunes_meta(title: str, author: str):
     query = urllib.parse.quote(f"{title} {author}")
     url = (
         f"https://itunes.apple.com/search"
-        f"?term={query}&media=audiobook&entity=audiobook&limit=5"
+        f"?term={query}&media=audiobook&entity=audiobook&limit=5&country=us"
     )
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "join-audiobooks/1.0"})
@@ -345,6 +346,10 @@ def flatten_pass(archive: Path) -> int:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--author", metavar="NAME", help="Limit to one author folder")
+    args = parser.parse_args()
+
     setup_logging()
     log.info("=== Audiobook join started ===")
     log.info("Archive: %s", ARCHIVE)
@@ -353,7 +358,14 @@ def main():
         log.error("Archive not found: %s", ARCHIVE)
         sys.exit(1)
 
-    books = discover_books(ARCHIVE)
+    if args.author:
+        author_dir = ARCHIVE / args.author
+        if not author_dir.is_dir():
+            log.error("Author folder not found: %s", author_dir)
+            sys.exit(1)
+        books = [b for b in discover_books(ARCHIVE) if b.parent == author_dir]
+    else:
+        books = discover_books(ARCHIVE)
     log.info("Found %d book directories to process", len(books))
 
     errors = skipped = success = 0
