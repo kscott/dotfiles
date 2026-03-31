@@ -32,6 +32,7 @@ TITLE_ALIASES = {
     "the night manger": "the night manager",          # filename typo (Le Carré)
     # Legacy format: "Author, Last - (Series ##) Title (Year) (Bitrate) Narrator"
     "grippando, james - (js 11) black horizon (2014) (64k) jonathan davis": "black horizon",
+    "14 - ian fleming - octopussy_unabridged": "octopussy and the living daylights",  # Fleming #14
 }
 
 # Author folders to skip entirely — leave all files as-is.
