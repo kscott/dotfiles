@@ -34,6 +34,12 @@ from pathlib import Path
 ARCHIVE = Path("/Volumes/Attic/Audiobooks/Archive")
 LOG_FILE = Path("/tmp/audiobook-meta-fix.log")
 
+# Author folders where the folder name is a series/character, not an author.
+# Artist tag normalization is skipped — iTunes returns unreliable author data for these.
+SKIP_ARTIST_NORM = {
+    "James Bond",
+}
+
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 
@@ -136,6 +142,19 @@ def fetch_cover(art_url: str) -> Path | None:
         return Path(tmp.name)
     except Exception:
         return None
+
+
+# ── Metadata normalization helpers ───────────────────────────────────────────
+
+def _norm(s: str) -> str:
+    """Lowercase, strip all non-word chars — for loose equality checks."""
+    return re.sub(r'[^\w]', '', (s or '').lower())
+
+
+def _strip_series_prefix(stem: str) -> str:
+    """'Series Name 01 - Title' → 'Title'. Returns stem unchanged if no match."""
+    m = re.search(r'\d+(?:\.\d+)?\s*-\s*(.+)$', stem)
+    return m.group(1).strip() if m else stem
 
 
 # ── Filename proposal ─────────────────────────────────────────────────────────
@@ -254,12 +273,22 @@ def audit(m4b: Path, args) -> bool:
     # Always fetch iTunes so we can propose a rename even on complete files
     itunes = fetch_itunes(book_name, author_name)
 
-    # Merge: prefer existing values, fill gaps from iTunes
+    # Derive clean title + artist from iTunes, falling back to filename/folder
+    clean_title  = itunes.get("title",  "").strip() or _strip_series_prefix(book_name)
+    clean_artist = itunes.get("artist", "").strip() or author_name
+
+    # Flag dirty tags: existing value present but doesn't match clean value
+    title_dirty  = bool(meta["title"]  and _norm(meta["title"])  != _norm(clean_title))
+    artist_dirty = bool(author_name not in SKIP_ARTIST_NORM
+                        and meta["artist"] and _norm(meta["artist"]) != _norm(clean_artist))
+    needs_normalize = title_dirty or artist_dirty
+
+    # Merge: clean values take priority; fill remaining gaps from iTunes
     merged = {
-        "title":  meta["title"]  or itunes.get("title",  book_name),
-        "artist": meta["artist"] or itunes.get("artist", author_name),
-        "genre":  meta["genre"]  or itunes.get("genre",  "Audiobook"),
-        "year":   meta["year"]   or itunes.get("year",   ""),
+        "title":  clean_title,
+        "artist": meta["artist"] if author_name in SKIP_ARTIST_NORM else clean_artist,
+        "genre":  meta["genre"]  or itunes.get("genre", "Audiobook"),
+        "year":   meta["year"]   or itunes.get("year",  ""),
         "series":     itunes.get("series", ""),
         "series_num": itunes.get("series_num", ""),
     }
@@ -278,7 +307,7 @@ def audit(m4b: Path, args) -> bool:
                                                          "series_num": merged["series_num"]}})
 
     # Nothing to do
-    if not needs_meta and not needs_cover and not new_stem:
+    if not needs_meta and not needs_normalize and not needs_cover and not new_stem:
         return False
 
     # Report
@@ -288,6 +317,11 @@ def audit(m4b: Path, args) -> bool:
         log.info("  META:   missing %s → %s",
                  ", ".join(missing),
                  " | ".join(f"{k}={merged[k]}" for k in missing if merged.get(k)))
+    if needs_normalize:
+        if title_dirty:
+            log.info("  NORM:   title %r → %r", meta["title"], clean_title)
+        if artist_dirty:
+            log.info("  NORM:   artist %r → %r", meta["artist"], clean_artist)
     if needs_cover:
         log.info("  COVER:  %s", "will download" if itunes.get("art_url") else "not found on iTunes")
     if new_stem:
@@ -297,7 +331,7 @@ def audit(m4b: Path, args) -> bool:
         return True   # dry run — reported, not applied
 
     # Apply
-    if needs_meta or needs_cover:
+    if needs_meta or needs_normalize or needs_cover:
         ok = remux(m4b, merged, cover_path)
         if cover_path:
             cover_path.unlink(missing_ok=True)
