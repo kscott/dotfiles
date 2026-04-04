@@ -10,6 +10,8 @@
 #   4. Reconnect: ssh -o StrictHostKeyChecking=accept-new plex 'echo ok'
 #   (Long-term fix: assign a static IP to the Plex machine in your router's DHCP settings)
 
+export PATH="/opt/homebrew/bin:$PATH"
+
 CALIBREDB="/Applications/calibre.app/Contents/MacOS/calibredb"
 VIDEO_INBOX="/Volumes/Media/Inbox"
 MUSIC_INBOX="/Volumes/Music/Inbox"
@@ -81,8 +83,12 @@ handle_music() {
         log "Music (cue+FLAC): $(basename "$path") — splitting tracks"
         find "$path" -type f -iname "*.cue" | while read -r cue; do
             dir="$(dirname "$cue")"
+            flac_count=$(find "$dir" -maxdepth 1 -iname "*.flac" | wc -l | tr -d ' ')
             flac="$(find "$dir" -maxdepth 1 -iname "*.flac" | head -1)"
-            if [[ -n "$flac" ]]; then
+            if [[ "$flac_count" -gt 1 ]]; then
+                log "  Tracks already split ($flac_count files) — skipping shnsplit"
+                cp -r "$dir" "$MUSIC_INBOX/" && log "  Copied: $(basename "$dir")"
+            elif [[ -n "$flac" ]]; then
                 dest="$MUSIC_INBOX/$(basename "$dir")"
                 mkdir -p "$dest"
                 shnsplit -f "$cue" -o flac -d "$dest" "$flac" 2>&1 | while read -r line; do log "    $line"; done
