@@ -26,14 +26,17 @@ Calculates historical sprint velocity for the Content Squad (TACO project).
 ### 1. Determine sprint range
 
 Default: last 6 completed sprints. Accept a number if the user specifies (e.g. "last 8 sprints").
-Determine the most recent closed sprint number by querying a known recent item:
+Determine the most recent closed sprint number by querying a known recent item.
+
+**Note:** `search --json` returns nulls when filtering by sprint name — use table output
+instead and grep for the key:
 
 ```bash
 acli jira workitem search \
   --jql "project = TACO AND sprint in closedSprints()" \
-  --fields "key" --limit 1 --json
-# Returns a list. Take the first non-null item's key, then:
-acli jira workitem view KEY --fields "*all" --json
+  --fields "key" --limit 1
+# Grab the TACO-XXXX key from the table output, then:
+acli jira workitem view KEY --fields "customfield_10008" --json
 # Sprint info is in customfield_10008 — list of sprint objects with name, startDate, endDate, state
 ```
 
@@ -94,11 +97,40 @@ For each returned item, fetch points via `view` as in Step 2.
 For unpointed non-sprint items, apply **2 pts as a conservative estimate** and
 mark all such values clearly as *(est.)* in output.
 
-### 4. Identify sprint date ranges
+### 4. Get exact sprint date ranges
 
-Sprint dates come from `customfield_10008` on any item in that sprint.
-If exact dates aren't available for older sprints, estimate by working backwards
-from the most recent known sprint start at 2-week intervals.
+Sprint dates are stored in Jira and must be fetched — do not estimate. For each sprint:
+
+```bash
+# Step 1: get one item from the sprint (use table output, not --json — search --json
+# returns nulls for sprint-filtered queries in some acli versions)
+acli jira workitem search \
+  --jql "project = TACO AND sprint = 'Content Sprint NN'" \
+  --fields "key" --limit 1
+# Grab the TACO-XXXX key from the table output
+
+# Step 2: fetch sprint metadata from that item
+acli jira workitem view TACO-XXXX --fields "customfield_10008" --json
+# customfield_10008 is a list of sprint objects — find the one whose name matches
+# Fields available: name, startDate, endDate, completeDate, state, goal, boardId
+```
+
+Example response:
+```json
+{
+  "name": "Content Sprint 20",
+  "startDate": "2026-03-11T17:38:59.121Z",
+  "endDate": "2026-03-25T17:38:17.000Z",
+  "completeDate": "2026-03-25T16:07:02.004Z",
+  "state": "closed",
+  "goal": "GSD!! Bust a move!"
+}
+```
+
+**Important:** Sprint duration is not always 2 weeks. Always check the actual dates.
+Longer sprints (3 weeks) naturally produce higher point totals — flag this in the output
+rather than treating them as a velocity peak. Calculate pts/day if comparing across
+sprints of different lengths.
 
 ### 5. Present the velocity table
 

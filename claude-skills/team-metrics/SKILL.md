@@ -260,7 +260,7 @@ Run the `fetch_atlassian_metrics.py` script. This uses the `atlassian-api@ibotta
 plugin directly (no MCP needed at runtime — just env vars):
 
 ```bash
-PLUGIN_SRC="$HOME/.claude/plugins/cache/ibotta/atlassian-api/1.0.0/src"
+PLUGIN_SRC="$HOME/.claude/plugins/marketplaces/ibotta/plugins/atlassian-api/src"
 PYTHONPATH="$PLUGIN_SRC" uv run --with requests \
   python3 <metrics-folder>/fetch_atlassian_metrics.py \
   --config  <metrics-folder>/team_config.json \
@@ -275,7 +275,7 @@ Collects per person:
 **Jira:**
 - Active tickets (statusCategory != Done): key, summary, status, type, URL
 - Tickets closed this week (updated to Done within the date range)
-- On-call detection: looks for "oncall" / "on-call" keywords in ticket titles
+- On-call is NOT detected from Jira tickets (team no longer creates on-call tickets)
 
 **Confluence:**
 - Pages created this week (CQL: `creator = accountId AND created >= start`)
@@ -291,11 +291,12 @@ Writes to `metrics_data.json → members[name].jira` and `members[name].confluen
 
 ### Step 5 — Slack messages
 
-> **⚠️ FYI — Slack MCP result cap**: The `slack_search_public` (and
-> `slack_search_public_and_private`) tool returns a **maximum of 20 results per call**
-> and does not paginate. This means any count of exactly 20 is a floor, not a true
-> total — the actual number of messages may be higher. To avoid misleading readers,
-> display counts that hit the limit as **"20+"** rather than "20" in all reports.
+> **⚠️ FYI — Slack MCP pagination**: The `slack_search_public` tool returns a maximum
+> of 20 results per call, but supports a `cursor` parameter for pagination. Paginate up
+> to **3 pages** (max 60 results total) per search by passing the `cursor` from each
+> response into the next call. Stop early if fewer than 20 results are returned (end of
+> results). If 60 results are reached and there are still more, display the count as
+> **"60+"** rather than "60" in all reports.
 
 Search for messages from the member in each channel they're active in,
 **scoped to Mon–Fri only** (never include Saturday or Sunday messages):
@@ -304,26 +305,92 @@ from:<slack_handle> after:<start_minus_1_day> before:<end_plus_1_day>
 ```
 When counting results, discard any messages whose timestamp falls on a Saturday or Sunday.
 
-**Cap handling**: if the total count returned equals 20, record and display it as
-`"20+"` in both the HTML report and the Word doc to signal the result is capped.
+**Pagination**: for each search, paginate up to 3 pages (passing `cursor` from each response) to collect up to 60 results. Stop early if a page returns fewer than 20 results. If all 3 pages are full (60 results) and a cursor still exists, record and display the count as `"60+"` to signal it is capped.
 
-Then run per-channel searches to get per-channel counts. Key channels to check:
-- `#enablement-apis`, `#eapi-squad-only`, `#client_apis_engineering` (or your squad's channels)
-- DMs with the EM
+Then run per-channel searches to get per-channel counts. Channels are discovered organically from search results — wherever the person posted, it appears.
 
 Collect:
-- `total_messages` — integer total (sum per-channel counts; treat "20+" as 20)
-- `per_channel` — list of `{ channel, count }` for channels with activity
+- `total_messages` — integer total (sum per-channel counts; treat "60+" as 60)
+- `per_channel` — list of `{ channel, count, summary? }` for channels with activity
 - `active_window` — earliest and latest message timestamp as a time range
+
+**Channel summaries:** After collecting counts, check `slack_summary_channels` in `team_config.json`. For each of those channels where the person had activity, re-read the messages and write a `summary`: 1–2 sentences describing what they were actually doing there — topics raised, questions answered, work referenced. Skip if count is 0. Channels not in `slack_summary_channels` get count only (no `summary` field).
 
 Write to `metrics_data.json → members[name].slack`.
 
-**Note on "20+" cap**: Slack search returns max 20 results per query. If a channel shows
-"20+", the actual count is at least 20. Sum all channel counts for the displayed total.
+**Note on "60+" cap**: Each Slack search paginates up to 3 pages (max 60 results). If all 3 pages fill and a cursor remains, display the count as "60+". Sum all channel counts for the displayed total.
+
+#### Partial absence detection
+
+While scanning each person's Slack messages, also look for messages indicating they were sick or partially unavailable. These are surfaced as a flag on the member card — they do **not** affect capacity math.
+
+**Detection patterns** (all from #content_squad, all from team members):
+- `"not feeling well"` / `"not feeling great"` / `"feeling not great"`
+- `"headache"` + context of resting or being offline
+- `"stomach bug"` / `"fever"` / `"fighting this illness"` / `"fighting off"`
+- `"allergies"` + `"Benadryl"` / `"rest"`
+- `"take the day"` / `"take the rest of the day"` / `"take the morning"`
+- `"rest for a bit"` / `"rest a bit longer"` / `"lie back down"`
+- `"cut out early"` / `"cutting out"` + illness context
+- `"call it a day"` when posted in the morning + illness context
+
+**Do NOT flag** (distracted but working):
+- "attention will be divided" (kid sick at home)
+- "won't make standup" alone
+- "step out for a little while" for errands
+- Personal/family logistics without illness
+
+For each match, store:
+```json
+"partial_absences": [
+  { "date": "Mar 20", "note": "not feeling great, back this afternoon" },
+  { "date": "Mar 23", "note": "headache, taking the morning to rest" }
+]
+```
+
+Write to `metrics_data.json → members[name].partial_absences` when writing Slack data.
+The count across the team appears as a summary card; individual entries appear as a collapsible section on each member card (amber, open by default if non-empty).
 
 ---
 
-### Step 6 — Obsidian standups (optional)
+### Step 6 — On-call (PagerDuty)
+
+On-call is sourced from PagerDuty, **not Jira**. Only the **primary** (L1) on-call person is tracked.
+
+Content Squad schedule IDs:
+- Primary: `PUL2FDL` (Content Squad Primary)
+- Secondary: `PTY2TZH` (Content Squad Secondary — not tracked)
+
+**Rotation rule:** Rotations happen at **9am Monday**. Always use `T09:00:00` as the `since` time so the pre-rotation window (midnight–9am) is excluded and doesn't pull in the previous week's on-call person.
+
+```bash
+source ~/.zshrc
+PYTHONPATH="/Users/ken.scott/.claude/plugins/cache/ibotta/pagerduty-api/1.0.0/src" \
+uv run --with requests python3 -c "
+from pagerduty import SchedulesClient, PagerDutyConfig
+config = PagerDutyConfig.from_env()
+schedules = SchedulesClient(config)
+oncalls = schedules.list_on_calls(
+    schedule_ids=['PUL2FDL'],
+    since='<start>T09:00:00',
+    until='<end>T23:59:59'
+)
+for oc in oncalls.get('oncalls', []):
+    print(oc['user']['summary'])
+"
+```
+
+Set `on_call: { is_on_call: true, source: 'pagerduty', role: 'primary' }` for the primary on-call person. All others get `is_on_call: false`.
+
+OOO source priority:
+1. **Individual calendar** (primary) — checked first via `calendar_id` in config
+2. **Squad calendar** (`squad_calendar_id`) — fallback; catches members who haven't updated personal calendars yet (e.g., Nate uses Slack status instead of personal calendar)
+
+The script checks both and merges, so OOO on either calendar is counted.
+
+---
+
+### Step 8 — Obsidian standups (optional)
 
 If `obsidian_standup_file` is set in `team_config.json` and the file exists, run:
 
@@ -360,7 +427,7 @@ node <metrics-folder>/generate_html_report.js \
   --config  <metrics-folder>/team_config.json \
   --out     <metrics-folder>
 ```
-Apply the same `"20+"` rule per channel if that channel's count hits 20.
+Apply the same `"60+"` rule per channel if that channel's paginated count hits 60.
 
 Produces `<SQUAD>_Metrics_Week_<start>_to_<end>.html`.
 Open in any browser — has charts, per-person detail, and an "Export PDF" button.
@@ -452,7 +519,11 @@ After generating:
       },
       "slack": {
         "total_messages": 23,
-        "per_channel": [{ "channel": "#eapi-squad-only", "count": 15 }, { "channel": "#enablement-apis", "count": 8 }],
+        "per_channel": [
+          { "channel": "#content_squad", "count": 15, "summary": "Daily standups, raised a question about CONTENT-412 scope, responded to Brian's prod alert." },
+          { "channel": "#content_git", "count": 5, "summary": "Commented on two PRs: approved Nate's content-service change, left feedback on Miranda's indexer fix." },
+          { "channel": "#ibotta_unhinged", "count": 3 }
+        ],
         "active_window": "9:02am – 4:48pm"
       },
       "confluence": {
@@ -464,7 +535,7 @@ After generating:
           { "title": "Claude Code - Getting Started", "action": "updated", "url": "https://ibotta.atlassian.net/..." }
         ]
       },
-      "on_call": { "is_on_call": true, "source": "jira" },
+      "on_call": { "is_on_call": true, "source": "pagerduty", "role": "primary" },
       "standup": [
         { "date": "Mar 16", "bullets": ["PAPI demo prep", "EMDash work", "Flights epic"] },
         { "date": "Mar 18", "bullets": ["AI Immersion day", "EMDash follow-ups"] }
