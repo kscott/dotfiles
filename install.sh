@@ -191,6 +191,15 @@ if [[ $MACHINE == "personal" ]]; then
   link bin/plex-export                bin/plex-export
 fi
 
+# ── Work setup ─────────────────────────────────────────────────────────────────
+
+if [[ $MACHINE == "work" ]]; then
+  echo "==> Linking bin scripts (work)"
+  mkdir -p $HOME/bin
+  link bin/backup-ai-folder.py    bin/backup-ai-folder.py
+  link bin/backup-notes-folder.py bin/backup-notes-folder.py
+fi
+
 # ── Next steps ─────────────────────────────────────────────────────────────────
 
 echo ""
