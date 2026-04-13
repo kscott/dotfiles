@@ -111,20 +111,25 @@ handle_video() {
     local path="$1"
     check_mount "/Volumes/Media" || return 1
 
+    local name staging dest
+    name="$(basename "$path")"
+    staging="$VIDEO_INBOX/.staging/$name"
+    dest="$VIDEO_INBOX/$name"
+    mkdir -p "$VIDEO_INBOX/.staging"
+
     # Extract tar archives to a temp dir, then copy contents
     if find "$path" -type f \( -iname "*.tar" -o -iname "*.tar.gz" -o -iname "*.tgz" \) | grep -q .; then
-        log "Video (tar archive): $(basename "$path") — extracting"
+        log "Video (tar archive): $name — extracting"
         tmpdir="$(mktemp -d)"
         find "$path" -type f \( -iname "*.tar" -o -iname "*.tar.gz" -o -iname "*.tgz" \) | while read -r archive; do
             log "  Extracting: $(basename "$archive")"
             tar -xf "$archive" -C "$tmpdir"
         done
-        dest="$VIDEO_INBOX/$(basename "$path")"
-        cp -r "$tmpdir" "$dest" && log "  Extracted to: $dest"
+        cp -r "$tmpdir" "$staging" && mv "$staging" "$dest" && log "  Extracted to: $dest"
         rm -rf "$tmpdir"
     else
-        log "Video: $(basename "$path") → $VIDEO_INBOX"
-        cp -r "$path" "$VIDEO_INBOX/" && log "  Copied"
+        log "Video: $name → $VIDEO_INBOX"
+        cp -r "$path" "$staging" && mv "$staging" "$dest" && log "  Copied"
     fi
 
     log "Copied — sorttv will pick up via cron"
