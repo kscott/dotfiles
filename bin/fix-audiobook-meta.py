@@ -117,8 +117,12 @@ def fetch_itunes(title: str, author: str) -> dict:
         }
         # Parse series name + book number from collectionName
         # Patterns: "Series Name, Book 3" / "Series Name #3" / "Series Name Book 3"
-        col = info["collection"]
-        m = re.search(r"^(.*?)(?:,\s*|\s+)(?:Book|#)\s*(\d+)", col, re.IGNORECASE)
+        # iTunes sometimes returns "Title : Series Name, Book 3 (Series Name Series)" —
+        # strip trailing parentheticals, then if a colon is present parse only the
+        # right-hand side so the title doesn't bleed into the series field.
+        col = re.sub(r'\s*\(.*?\)\s*$', '', info["collection"]).strip()
+        col_parse = col.split(':', 1)[1].strip() if ':' in col else col
+        m = re.search(r"^(.*?)(?:,\s*|\s+)(?:Book|#)\s*(\d+)", col_parse, re.IGNORECASE)
         if m:
             info["series"]     = m.group(1).strip()
             info["series_num"] = m.group(2).strip()
@@ -190,6 +194,15 @@ def proposed_filename(current: Path, itunes: dict) -> str | None:
     current_stem = current.stem.strip()
     if candidate.lower() == current_stem.lower():
         return None
+
+    # If iTunes returned no series data, the candidate is just the plain title.
+    # If the current filename already has a "Series NN - Title" prefix and the
+    # title portion matches, the existing name is already well-formatted — don't
+    # strip the prefix just because iTunes came back series-less.
+    if not (series and series_num):
+        stripped = _strip_series_prefix(current_stem)
+        if stripped.lower() == candidate.lower() and stripped != current_stem:
+            return None
 
     return candidate
 
