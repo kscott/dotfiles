@@ -15,7 +15,7 @@ export PATH="/opt/homebrew/bin:$PATH"
 CALIBREDB="/Applications/calibre.app/Contents/MacOS/calibredb"
 VIDEO_INBOX="/Volumes/Media/Inbox"
 MUSIC_INBOX="/Volumes/Music/Inbox"
-LOG="$HOME/Library/Logs/sort-downloads.log"
+LOG="$HOME/logs/sort-downloads.log"
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 
