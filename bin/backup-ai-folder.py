@@ -80,16 +80,29 @@ def create_dmg():
         str(DMG_PATH),
     ], check=True)
 
+def ensure_local():
+    """Force iCloud to download the DMG if it has been evicted to cloud-only storage."""
+    subprocess.run(["brctl", "download", str(DMG_PATH)], capture_output=True)
+
 def mount_dmg():
     if dmg_is_mounted():
         log("DMG already mounted — skipping attach")
         return
     log("Mounting DMG")
-    subprocess.run([
-        "hdiutil", "attach", str(DMG_PATH),
-        "-mountpoint", str(MOUNT_POINT),
-        "-nobrowse", "-quiet",
-    ], check=True)
+    ensure_local()
+    max_attempts = 3
+    for attempt in range(1, max_attempts + 1):
+        result = subprocess.run([
+            "hdiutil", "attach", str(DMG_PATH),
+            "-mountpoint", str(MOUNT_POINT),
+            "-nobrowse", "-quiet",
+        ])
+        if result.returncode == 0:
+            return
+        if attempt < max_attempts:
+            log(f"Mount attempt {attempt} failed — retrying in 10s")
+            time.sleep(10)
+    raise RuntimeError(f"Failed to mount DMG after {max_attempts} attempts")
 
 def unmount_dmg():
     if dmg_is_mounted():
