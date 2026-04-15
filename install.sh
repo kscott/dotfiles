@@ -89,6 +89,7 @@ link ripgreprc  .ripgreprc
 link rspec      .rspec
 mkdir -p ~/.config/doing
 link config/doing/config.yml .config/doing/config.yml
+link config/starship.toml    .config/starship.toml
 
 echo "==> Linking ~/.config"
 mkdir -p ~/.config
