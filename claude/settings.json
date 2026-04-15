@@ -1,0 +1,31 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "/Users/ken/bin/claude-status.sh"
+  },
+  "enabledPlugins": {
+    "swift-lsp@claude-plugins-official": true
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); skill=$(echo \"$input\" | jq -r '.tool_input.skill // empty'); if [ \"$skill\" = \"wrap\" ]; then echo '{\"continue\": false, \"stopReason\": \"The wrap skill is yours to invoke — type /wrap yourself.\"}'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); cmd=$(echo \"$input\" | jq -r '.tool_input.command // empty'); if echo \"$cmd\" | grep -qE '\\bsed\\b'; then echo '{\"continue\": false, \"stopReason\": \"sed is not allowed — it destroyed days of work and is permanently banned. Use the Edit tool instead.\"}'; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

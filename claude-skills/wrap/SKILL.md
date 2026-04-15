@@ -1,31 +1,37 @@
 ---
 name: wrap
-description: End-of-session wrap-up. Logs work with doing CLI, checks calendar and reminders, and appends to session log. Use when the user says wrap up, log it, done for the day, end session, or similar.
-allowed-tools: Bash, Read, AskUserQuestion
+description: End-of-session wrap-up. Checks calendar and reminders, logs work with doing CLI, and appends to session log. Use when the user says wrap up, log it, done for the day, or similar.
+disable-model-invocation: true
 ---
 
-# Session Wrap-Up
+## For Claude: if the Skill tool errors on this skill
+
+`disable-model-invocation: true` means only Ken invokes this skill by typing `/wrap`.
+If you attempted to invoke it via the Skill tool and got an error: **stop, do not read this file and proceed anyway.** Tell Ken the skill errored and ask him to type `/wrap` himself.
+
+## Current Time
+- Now: !`date "+%Y-%m-%d %H:%M"`
+- Hostname: !`hostname`
+
+## Session Wrap-Up
 
 You are wrapping up a Claude Code session for Ken Scott. Complete all steps in order.
 
 ---
 
-## Step 1: Get current time and start time
+### Step 1: Check calendar and reminders
+
+Use the hostname to determine which commands to run.
+
+**Home Mac (Mac-mini):**
 
 ```bash
-date
+get-clear recap today
 ```
 
-If the user hasn't provided a start time, ask:
-> "What time did you start?"
+This shows today's calendar events and activity log in one view. Use it to surface meetings and completed work that should be logged.
 
-Round both times to the nearest 15 minutes.
-
----
-
-## Step 2: Check today's calendar
-
-Pull Google Calendar events for today to surface meetings that should be logged:
+**Work Mac (any other hostname):**
 
 ```bash
 uv run --with "google-workspace @ git+ssh://git@github.com/Ibotta/google-workspace-py.git" python3 << 'EOF'
@@ -45,103 +51,90 @@ for e in events:
     t_end = e.get('end', {}).get('dateTime', '')
     print(f"{t[11:16]}–{t_end[11:16]}  {e['summary']}")
 EOF
-```
 
-Ask the user which meetings they attended and how (fully, partially, multitasked). Note any time corrections given by the user.
-
----
-
-## Step 3: Check Ibotta reminders
-
-Run both commands:
-
-```bash
-# Shows CLI activity today — any reminders added or marked done via CLI
 reminders what today
-
-# Shows current active list — completed items won't appear
 reminders list Ibotta
 ```
 
 `reminders what today` catches anything touched via the CLI during the session.
-`reminders list Ibotta` shows what's still open — useful for spotting items the user
-completed manually in the Reminders app (they'll be absent from the list).
+`reminders list Ibotta` shows what's still open — useful for spotting items completed manually in the Reminders app (they'll be absent from the list).
 
-Ask: "Did you complete any reminders during the session?"
-
-If the user names completed items, note them in the session log. Do NOT mark them done
-via CLI — the user has already done that.
+Ask the user which meetings they attended and whether any reminders were completed during the session. Note any corrections. Do NOT mark reminders done via CLI — the user has already done that.
 
 ---
 
-## Step 4: Log doing entries
+### Step 2: doing CLI entry
 
-Log the main work block first:
+Review what was accomplished. Write a concise doing entry (one line, imperative, specific).
 
-```bash
-~/.gem/ruby/4.0.1/bin/doing done --section Work --from "<start> to <end>" "<summary> @<tags>"
+**Before running the command, compute the time explicitly. Show your work:**
+
+1. **Now:** read the current time from the `## Current Time` block above (e.g. 22:58)
+2. **Rounded end:** round to nearest :00, :15, :30, or :45 (e.g. 22:58 → 23:00)
+3. **Start time:** use what the user stated (e.g. "started at 9pm" → 21:00), or derive from conversation context
+4. **Rounded start:** round start to nearest :00, :15, :30, or :45
+5. **`--back` value:** the rounded start time as a clock time (e.g. `--back 9pm`), NOT a duration
+
+State the result before running:
+> Start: 9:00pm — End: 11:00pm — `--back 9pm`
+
+Then run:
+
+```
+doing done "<summary> @<tags>" --back <rounded-start-time> --section <section>
 ```
 
-Then log each attended meeting as a separate entry:
+**Section and tagging:**
 
-```bash
-~/.gem/ruby/4.0.1/bin/doing done --section Work --from "<start> to <end>" "<Person> / Ken 1:1 @meeting @content-squad"
+Always specify `--section` explicitly — never rely on the default.
+
+| Work done | `--section` | Tags |
+|---|---|---|
+| Ibotta / work projects | `Work` | `@work` |
+| Work meetings | `Work` | `@meeting @work @<group>` — e.g. `@content-squad`, `@retailer-distribution` |
+| Personal / home tasks | `Home` | `@home` |
+| Get Clear and other personal projects | `Home` | `@projects @get-clear` (or relevant project tag) |
+| Trinity Council meeting | `Home` | `@meeting @trinity-council` |
+| Trinity Council project work | `Home` | `@projects @trinity-council` |
+
+**Tagging rules:**
+- Meeting type (standup, 1:1, sprint review) goes in the entry title — not as a tag
+- No sub-type tags like `@standup` or `@sprint-review` — redundant
+- The group tag (e.g. `@content-squad`) is the clarifying data for work meetings
+- If a session touched more than one project, write a separate `doing done` entry per project
+
+**Example:**
 ```
-
-**Time rules:**
-- Use `--from "8:30am to 9:00am"` format — not `--back`
-- Round to nearest 15 minutes
-- Work block and meetings can overlap — that's fine
-
-**Tagging conventions:**
-- Sprint/Jira/squad work: `@content-squad @sprint`
-- 1:1s and team meetings: `@meeting @content-squad`
-- Get Clear development: `@projects @get-clear`
-- Home/personal tasks: `@home`
-
-**Summary style:** One line, imperative, specific enough to reconstruct context.
+doing done "Plex playlists, backup verify notification, library comparison doc @projects @home" --back 9pm --section Home
+```
 
 ---
 
-## Step 5: Append to session log
+### Step 3: Session log
 
-File: `~/Library/Mobile Documents/com~apple~CloudDocs/Productivity/session-log.md`
+Append a new dated entry to:
+`~/Library/Mobile Documents/com~apple~CloudDocs/Productivity/session-log.md`
 
-Append a new entry at the **end** of the file:
-
+Format:
 ```markdown
-
----
-
-## YYYY-MM-DD (Weekday, H:MMam–H:MMam) — Work Mac
+## YYYY-MM-DD (Weekday, ~H:MMam–H:MMpm) — Home Mac / Work Mac
 
 **Focus:** One-line summary
 
-### What we did
+**Completed:**
+- Bullet list of what was done, specific enough to reconstruct context
 
-Narrative bullets of what was accomplished. Specific enough to reconstruct context
-in a future session without re-reading the conversation.
-
-### Key files
-- `path/to/file` — what changed and why
-
-### Meetings
-- **H:MMam–H:MMam — Meeting name** — brief note; "notes TBD" if not yet written
-
-### Reminders completed
-- Item name (if any flagged by user)
-
-### doing entries logged
-- H:MMam–H:MMam — Summary @tags
+**Pending:**
+- Anything left open, blocked, or handed off
 ```
 
-Omit sections that don't apply (no "Meetings" if no meetings, no "Reminders completed" if none flagged).
+Append the new entry at the end of the file. The log is chronological, oldest first.
 
-**Both doing and session log are non-negotiable — never do one without the other.**
+Both doing and session log are non-negotiable — never do one without the other.
 
 ---
 
-## Step 6: Confirm
+### Step 4: Confirm
 
 Report what was logged: doing entries (times + summaries) and session log entry header.
 

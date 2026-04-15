@@ -77,9 +77,10 @@ mkdir -p ~/.ssh
 chmod 700 ~/.ssh
 link ssh/config .ssh/config
 
-echo "==> Linking Claude skills"
+echo "==> Linking Claude config"
 mkdir -p ~/.claude
-link claude-skills .claude/skills
+link claude-skills         .claude/skills
+link claude/settings.json  .claude/settings.json
 
 echo "==> Linking tool configs"
 link gemrc      .gemrc
