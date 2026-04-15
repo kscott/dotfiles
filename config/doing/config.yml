@@ -1,7 +1,5 @@
 ---
 plugins:
-  plugin_path: "~/.config/doing/plugins"
-  command_path: "~/.config/doing/commands"
   byday:
     item_width: 60
 doing_file: "~/Library/Mobile Documents/com~apple~CloudDocs/Productivity/doing.md"
