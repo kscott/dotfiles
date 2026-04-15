@@ -9,6 +9,7 @@ call plug#begin('~/.vim/plugged')
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
 Plug 'preservim/nerdtree', { 'on': 'NERDTreeToggle' }
+Plug 'sjbach/lusty'
 
 " Editing
 Plug 'tpope/vim-surround'
@@ -189,6 +190,10 @@ map <C-n> :NERDTreeToggle<CR>
 
 " fzf: file finder (replaces ctrlp)
 nnoremap <C-p> :Files<CR>
+
+" LustyJuggler: buffer switcher
+nnoremap <leader>j :LustyJuggler<CR>
+nnoremap <leader><leader> :LustyJugglePrevious<CR>
 
 " fzf: ripgrep search (replaces ack)
 nnoremap <leader>/ :Rg<CR>
