@@ -23,10 +23,7 @@ A Claude session at work ran a sed command that destroyed days of work. No backu
 
 ## Session wrap-up (`/wrap`)
 
-The `/wrap` skill has `disable-model-invocation: true` — the Skill tool will error. When that happens:
-**Read `~/.claude/skills/wrap/SKILL.md` directly and follow its instructions exactly.**
-
-Do not improvise. Do not substitute manual `doing done` calls or hand-written session log entries.
+The `/wrap` skill has `disable-model-invocation: true`. If the Skill tool errors on it: **stop and ask Ken to type `/wrap` himself.** Do not read SKILL.md and proceed. Do not improvise.
 
 Always do both steps — `doing done` CLI entry AND session log update. Never one without the other.
 
