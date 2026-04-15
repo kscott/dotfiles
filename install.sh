@@ -81,6 +81,7 @@ echo "==> Linking Claude config"
 mkdir -p ~/.claude
 link claude-skills         .claude/skills
 link claude/settings.json  .claude/settings.json
+link claude/CLAUDE.md      .claude/CLAUDE.md
 
 echo "==> Linking tool configs"
 link gemrc      .gemrc
