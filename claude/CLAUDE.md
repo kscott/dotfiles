@@ -84,6 +84,14 @@ When Ken asks to "show", "print", or "display" a file: output it as a fenced mar
 
 ---
 
+## Show work before acting
+
+For any operation that modifies files, runs git commands, sends data, or cannot be easily undone: state what you are about to do and why before doing it. One sentence is enough. This gives Ken the chance to catch a mistake before it lands.
+
+This applies even when the action seems obvious. Especially then.
+
+---
+
 ## Tools and workarounds
 
 When an old tool version is causing problems or requiring workarounds, flag it and update via brew before engineering around the limitation.

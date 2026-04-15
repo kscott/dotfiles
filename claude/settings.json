@@ -22,7 +22,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "input=$(cat); cmd=$(echo \"$input\" | jq -r '.tool_input.command // empty'); if echo \"$cmd\" | grep -qE '\\bsed\\b'; then echo '{\"continue\": false, \"stopReason\": \"sed is not allowed — it destroyed days of work and is permanently banned. Use the Edit tool instead.\"}'; fi"
+            "command": "input=$(cat); cmd=$(echo \"$input\" | jq -r '.tool_input.command // empty'); if echo \"$cmd\" | grep -qE '\\bsed\\b'; then echo '{\"continue\": false, \"stopReason\": \"sed is banned — it destroyed days of work. Use the Edit tool instead.\"}'; elif echo \"$cmd\" | grep -qE '(echo|printf|cat)\\s[^|]*>'; then echo '{\"continue\": false, \"stopReason\": \"Direct file writes via Bash are banned. Use the Write or Edit tool instead.\"}'; elif echo \"$cmd\" | grep -qE 'git (reset --hard|push --force|push -f|rebase -i)'; then echo '{\"continue\": false, \"stopReason\": \"Destructive git command blocked. Run it yourself if you mean it.\"}'; elif echo \"$cmd\" | grep -qE 'doing\\.md'; then echo '{\"continue\": false, \"stopReason\": \"doing.md cannot be touched directly. Use the doing CLI.\"}'; fi"
           }
         ]
       }
