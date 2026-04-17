@@ -416,28 +416,42 @@ Expected format in the standup file:
 
 ---
 
-### Step 7 — Generate HTML report
+### Step 7 — Generate reports
 
+Read `output_formats` from `team_config.json` (defaults to `["html"]` if absent). Run the corresponding script for each format listed.
+
+**`"html"`** — interactive report with charts; also archives `metrics_data.json` to `metrics_archive/`:
 ```bash
-node <metrics-folder>/generate_html_report.js \
+node $SKILL_DIR/generate_html_report.js \
   --members ALL \
-  --start   2026-03-16 \
-  --end     2026-03-20 \
-  --data    <metrics-folder>/metrics_data.json \
-  --config  <metrics-folder>/team_config.json \
-  --out     <metrics-folder>
+  --start   <start> \
+  --end     <end> \
+  --data    ~/ai/team-metrics/metrics_data.json \
+  --config  ~/ai/team-metrics/team_config.json \
+  --out     ~/ai/team-metrics
 ```
-Apply the same `"60+"` rule per channel if that channel's paginated count hits 60.
 
-Produces `<SQUAD>_Metrics_Week_<start>_to_<end>.html`.
-Open in any browser — has charts, per-person detail, and an "Export PDF" button.
-Also archives data to `metrics_archive/metrics_<start>_to_<end>.json`.
+**`"md"`** — plain Markdown, no npm dependencies:
+```bash
+node $SKILL_DIR/generate_md_report.js \
+  --members ALL \
+  --start   <start> \
+  --end     <end> \
+  --data    ~/ai/team-metrics/metrics_data.json \
+  --config  ~/ai/team-metrics/team_config.json \
+  --out     ~/ai/team-metrics
+```
 
----
-
-### Step 8 — Generate Word doc
-
-> **Disabled for this user.** Do not run `generate_report.js`. Skip this step entirely.
+**`"docx"`** — cumulative monthly Word doc (prepends new week each run); requires `npm install` in `$SKILL_DIR` first:
+```bash
+node $SKILL_DIR/generate_report.js \
+  --members ALL \
+  --start   <start> \
+  --end     <end> \
+  --data    ~/ai/team-metrics/metrics_data.json \
+  --config  ~/ai/team-metrics/team_config.json \
+  --out     ~/ai/team-metrics
+```
 
 ---
 
@@ -467,9 +481,9 @@ Print the Drive URLs so the user can open or share them.
 ### Step 10 — Deliver output
 
 After generating:
-1. Run `open <path-to-html>` to open the report in the browser
-2. Confirm: HTML path, Word doc path, Drive URLs
-3. Note whether the Word doc was newly created or appended (and how many weeks it contains)
+1. For each format in `output_formats`, confirm the output path
+2. Open generated files: `open <path>` for each (browser for HTML, default app for MD/docx)
+3. If `"docx"` was generated, note whether it was newly created or appended (and how many weeks it now contains)
 
 ---
 

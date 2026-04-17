@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "docx": "^9.6.1"
+  }
+}
