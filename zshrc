@@ -12,19 +12,27 @@ unset _f
 # Secrets (not tracked by git — personal tokens, etc.)
 [[ -f $HOME/.zsh/secrets.zsh ]] && source $HOME/.zsh/secrets.zsh
 
-# NVM (lazy load — only initializes when you first use node/npm/etc.)
+# NVM
 export NVM_DIR="$HOME/.nvm"
-if [[ -s $NVM_DIR/nvm.sh ]] && (( ! ${+functions[__init_nvm]} )); then
-  [[ -s $NVM_DIR/bash_completion ]] && source $NVM_DIR/bash_completion
-  _nvm_cmds=(nvm node npm yarn npx)
-  __init_nvm() {
-    for _c in $_nvm_cmds; do unalias $_c 2>/dev/null; done
+if [[ -s $NVM_DIR/nvm.sh ]]; then
+  if [[ -o interactive ]]; then
+    # Lazy load for interactive shells — avoids ~200ms startup cost
+    if (( ! ${+functions[__init_nvm]} )); then
+      [[ -s $NVM_DIR/bash_completion ]] && source $NVM_DIR/bash_completion
+      _nvm_cmds=(nvm node npm yarn npx)
+      __init_nvm() {
+        for _c in $_nvm_cmds; do unalias $_c 2>/dev/null; done
+        source $NVM_DIR/nvm.sh
+        unset _nvm_cmds
+        __init_nvm() { true }
+      }
+      for _c in $_nvm_cmds; do alias $_c="__init_nvm && $_c"; done
+      unset _c
+    fi
+  else
+    # Direct load for non-interactive shells (scripts, tools)
     source $NVM_DIR/nvm.sh
-    unset _nvm_cmds
-    unset -f __init_nvm
-  }
-  for _c in $_nvm_cmds; do alias $_c="__init_nvm && $_c"; done
-  unset _c
+  fi
 fi
 
 # chruby
