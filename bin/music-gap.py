@@ -42,6 +42,8 @@ def normalize(s):
     s = re.sub(r'^(the |a |an )', '', s)
     # Remove all non-alphanumeric except spaces
     s = re.sub(r"[^\w\s]", '', s)
+    # Normalize vol/volume
+    s = re.sub(r'\bvol\b', 'volume', s)
     # Collapse whitespace
     s = re.sub(r'\s+', ' ', s).strip()
     return s
