@@ -333,10 +333,37 @@ def main():
 
     scored.sort(key=lambda x: -x[0])
 
+    # Load blurb cache
+    blurb_cache = {}
+    blurb_path = os.path.join(NOTES_DIR, 'album-blurbs.json')
+    if os.path.exists(blurb_path):
+        import json
+        with open(blurb_path) as f:
+            blurb_cache = json.load(f)
+
+    def get_blurb(artist, album):
+        def norm(s):
+            s = s.lower().strip()
+            s = re.sub(r'[^\w\s]', '', s)
+            return re.sub(r'\s+', ' ', s).strip()
+        key = f"{norm(artist)} ||| {norm(album)}"
+        entry = blurb_cache.get(key, {})
+        return entry.get('blurb') if entry else None
+
+    def shorten(src):
+        src = re.sub(r'1001 Albums.*', '1001', src)
+        src = re.sub(r'1000 Recordings.*', '1000rec', src)
+        src = re.sub(r'Penguin.*', 'Penguin', src)
+        src = re.sub(r'1000 Jazz.*', '1000jazz', src)
+        src = re.sub(r'50 Greatest.*', '50jazz', src)
+        src = re.sub(r'Rolling.*', 'RS500', src)
+        src = re.sub(r'New Music.*', 'NewMusic', src)
+        return src
+
     # Write output
     out_path = os.path.join(NOTES_DIR, 'must-hear-ranked-by-relevance.md')
     lines = ['# Must-Hear Albums Ranked by Personal Relevance\n']
-    lines.append('*Scored on: artist familiarity (4×), genre affinity (2×), multi-list citations (1.5×)*\n')
+    lines.append('*Scored on: artist familiarity (4×), multi-list citations (3×), genre affinity (2×)*\n')
     lines.append(f'*Based on {total_plays:,} Plex plays across {len(artist_plays)} artists*\n')
 
     lines.append('\n## Top Artists in Your Library\n')
@@ -348,20 +375,15 @@ def main():
 
     lines.append('\n---\n')
     lines.append('## Ranked Missing Albums\n')
-    lines.append('| # | Score | Lists | Album |')
-    lines.append('|---|-------|-------|-------|')
     for i, (s, entry) in enumerate(scored, 1):
-        def shorten(src):
-            src = re.sub(r'1001 Albums.*', '1001', src)
-            src = re.sub(r'1000 Recordings.*', '1000rec', src)
-            src = re.sub(r'Penguin.*', 'Penguin', src)
-            src = re.sub(r'1000 Jazz.*', '1000jazz', src)
-            src = re.sub(r'50 Greatest.*', '50jazz', src)
-            src = re.sub(r'Rolling.*', 'RS500', src)
-            src = re.sub(r'New Music.*', 'NewMusic', src)
-            return src
         src_short = ', '.join(sorted(set(shorten(src) for src in entry['sources'])))
-        lines.append(f"| {i} | {s:.2f} | {src_short} | {entry['display']} |")
+        blurb = get_blurb(entry['artist'], entry['work'])
+        lines.append(f"### {i}. {entry['display']}")
+        lines.append(f"*Score: {s:.2f} — Lists: {src_short}*\n")
+        if blurb:
+            lines.append(f"{blurb}\n")
+        else:
+            lines.append('')
 
     with open(out_path, 'w') as f:
         f.write('\n'.join(lines))

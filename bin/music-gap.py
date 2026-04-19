@@ -443,7 +443,7 @@ def main():
             raw = f'{artist} — {work}'
             if entry_type == 'classical' and performer:
                 raw += f' [{performer}]'
-            key = normalize(re.sub(r'\s*\[.*?\]$', '', raw))
+            key = normalize_name(artist) + ' ||| ' + normalize(work)
             if dedup[key]['display'] is None:
                 dedup[key]['display'] = raw
             dedup[key]['sources'].append(title)
