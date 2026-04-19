@@ -166,6 +166,12 @@ def album_fuzzy(nb, norm_b):
     # (e.g. "Complete Savoy Dial Studio Recordings" vs "Complete Savoy Dial Master Takes")
     if len(lw) >= 3 and sum(1 for w in lw if w in norm_b) >= 3:
         return True
+    # "Highlights from X" / "Selections from X" satisfied by "Complete X" or full recording
+    nb_stripped = re.sub(r'^(highlights? (from|of)|selections? from|sampler)\s+', '', nb).strip()
+    if nb_stripped != nb and nb_stripped:
+        lw2 = long_words(nb_stripped)
+        if len(lw2) >= 2 and all(w in norm_b for w in lw2):
+            return True
     return False
 
 # ---------------------------------------------------------------------------
