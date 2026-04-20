@@ -25,7 +25,7 @@ from pathlib import Path
 HOME = Path.home()
 DMG_PATH = HOME / "Backups/notes-folder-backup.dmg"
 ICLOUD_BACKUP_PATH = HOME / "Library/Mobile Documents/com~apple~CloudDocs/Backups/notes-folder-backup.dmg"
-DMG_SIZE = "2g"
+DMG_SIZE = "250m"
 DMG_VOLNAME = "notes-backup"
 MOUNT_POINT = Path(f"/Volumes/{DMG_VOLNAME}")
 SOURCE = HOME / "Notes"
