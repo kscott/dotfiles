@@ -1,0 +1,254 @@
+#!/usr/bin/env python3
+"""
+jira-sprint-velocity — Sprint velocity and completion likelihood for TACO.
+
+Shows the last N closed sprints plus the current active sprint:
+  - Sprint-assigned: points committed vs completed
+  - Throughput: all story points completed during the sprint window (on-sprint or not)
+  - Projected completion likelihood for the current sprint based on historical throughput
+
+Usage: jira-sprint-velocity [--sprints N]  (default: 5)
+"""
+
+import json
+import base64
+import subprocess
+import sys
+from urllib.parse import quote, urlencode
+from datetime import datetime, timezone
+
+# --- Config ---
+EMAIL = "ken.scott@ibotta.com"
+BASE = "https://ibotta.atlassian.net"
+PROJECT = "TACO"
+DEFAULT_SPRINTS = 5
+
+# --- Helpers ---
+def get_token():
+    result = subprocess.run(
+        ["security", "find-generic-password", "-s", "acli", "-w"],
+        capture_output=True, text=True
+    )
+    raw = result.stdout.strip()
+    if raw.startswith("go-keyring-base64:"):
+        raw = raw[len("go-keyring-base64:"):]
+        return base64.b64decode(raw).decode()
+    return raw
+
+def curl_get(url, token):
+    auth = base64.b64encode(f"{EMAIL}:{token}".encode()).decode()
+    result = subprocess.run(
+        ["curl", "-s",
+         "-H", f"Authorization: Basic {auth}",
+         "-H", "Accept: application/json",
+         url],
+        capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        print(f"curl error fetching {url}:\n{result.stderr}", file=sys.stderr)
+        sys.exit(1)
+    if not result.stdout.strip():
+        print(f"Empty response from {url}", file=sys.stderr)
+        sys.exit(1)
+    return json.loads(result.stdout)
+
+def jira_search(jql, fields, token, max_results=200):
+    """Paginated JQL search, returns all issues."""
+    issues = []
+    start = 0
+    while True:
+        params = urlencode({
+            "jql": jql,
+            "fields": fields,
+            "maxResults": 50,
+            "startAt": start
+        })
+        data = curl_get(f"{BASE}/rest/api/3/search/jql?{params}", token)
+        issues.extend(data.get("issues", []))
+        total = data.get("total", 0)
+        start += len(data.get("issues", []))
+        if start >= total or start >= max_results:
+            break
+    return issues
+
+def pts(issue):
+    """Extract story points from an issue."""
+    return issue["fields"].get("customfield_10033") or 0
+
+def parse_dt(s):
+    """Parse Jira ISO datetime string."""
+    if not s:
+        return None
+    s = s[:19]  # trim microseconds/tz
+    return datetime.fromisoformat(s).replace(tzinfo=timezone.utc)
+
+def fmt_date(s):
+    if not s:
+        return "?"
+    return s[:10]
+
+def bar(done, total, width=10):
+    if total == 0:
+        return "░" * width + "  n/a"
+    filled = round(done / total * width)
+    pct = round(done / total * 100)
+    return "█" * filled + "░" * (width - filled) + f"  {pct}% ({done}/{total})"
+
+# --- Main ---
+def main():
+    n_sprints = DEFAULT_SPRINTS
+    if "--sprints" in sys.argv:
+        idx = sys.argv.index("--sprints")
+        n_sprints = int(sys.argv[idx + 1])
+
+    token = get_token()
+    if not token:
+        print("Error: could not retrieve Atlassian API token from Keychain")
+        sys.exit(1)
+
+    # 1. Find the TACO board
+    print("Finding TACO board...")
+    boards = curl_get(f"{BASE}/rest/agile/1.0/board?projectKeyOrId={PROJECT}&type=scrum", token)
+    if not boards.get("values"):
+        # Try kanban
+        boards = curl_get(f"{BASE}/rest/agile/1.0/board?projectKeyOrId={PROJECT}", token)
+    board_id = boards["values"][0]["id"]
+    board_name = boards["values"][0]["name"]
+
+    # 2. Get active sprint
+    active_data = curl_get(f"{BASE}/rest/agile/1.0/board/{board_id}/sprint?state=active", token)
+    active_sprints = active_data.get("values", [])
+
+    # 3. Get closed sprints (most recent N)
+    closed_data = curl_get(
+        f"{BASE}/rest/agile/1.0/board/{board_id}/sprint?state=closed&maxResults=50", token
+    )
+    closed_sprints = sorted(
+        closed_data.get("values", []),
+        key=lambda s: s.get("endDate", ""),
+        reverse=True
+    )[:n_sprints]
+    closed_sprints.reverse()  # oldest first
+
+    all_sprints = closed_sprints + active_sprints
+    if not all_sprints:
+        print("No sprints found.")
+        sys.exit(0)
+
+    print(f"Board: {board_name} (ID {board_id})")
+    print(f"Analyzing {len(closed_sprints)} closed sprint(s) + {len(active_sprints)} active sprint(s)...\n")
+
+    # 4. Analyze each sprint
+    results = []
+    for sprint in all_sprints:
+        sid = sprint["id"]
+        name = sprint["name"]
+        state = sprint["state"]
+        start_str = sprint.get("startDate", "")
+        end_str = sprint.get("endDate", "")
+        is_active = state == "active"
+
+        # Sprint-assigned issues
+        sprint_issues = jira_search(
+            f"sprint = {sid} AND issuetype = Story",
+            "summary,customfield_10033,status,assignee",
+            token
+        )
+        committed_pts = sum(pts(i) for i in sprint_issues)
+        completed_sprint_pts = sum(
+            pts(i) for i in sprint_issues
+            if i["fields"]["status"]["statusCategory"]["key"] == "done"
+        )
+        committed_count = len(sprint_issues)
+        completed_sprint_count = sum(
+            1 for i in sprint_issues
+            if i["fields"]["status"]["statusCategory"]["key"] == "done"
+        )
+
+        # Throughput: all stories completed during the sprint window
+        throughput_pts = 0
+        throughput_count = 0
+        if start_str and end_str:
+            start_date = fmt_date(start_str)
+            end_date = fmt_date(end_str)
+            throughput_issues = jira_search(
+                f'project = {PROJECT} AND issuetype = Story AND statusCategory = Done '
+                f'AND resolutiondate >= "{start_date}" AND resolutiondate <= "{end_date}"',
+                "summary,customfield_10033,status",
+                token
+            )
+            throughput_pts = sum(pts(i) for i in throughput_issues)
+            throughput_count = len(throughput_issues)
+
+        results.append({
+            "name": name,
+            "state": state,
+            "start": fmt_date(start_str),
+            "end": fmt_date(end_str),
+            "committed_pts": committed_pts,
+            "committed_count": committed_count,
+            "completed_sprint_pts": completed_sprint_pts,
+            "completed_sprint_count": completed_sprint_count,
+            "throughput_pts": throughput_pts,
+            "throughput_count": throughput_count,
+            "is_active": is_active,
+        })
+
+    # 5. Historical averages (closed sprints only)
+    closed_results = [r for r in results if not r["is_active"]]
+    avg_completion_rate = (
+        sum(r["completed_sprint_pts"] / r["committed_pts"]
+            for r in closed_results if r["committed_pts"] > 0)
+        / len(closed_results)
+    ) if closed_results else 0
+    avg_throughput = (
+        sum(r["throughput_pts"] for r in closed_results) / len(closed_results)
+    ) if closed_results else 0
+
+    # 6. Print sprint-assigned table
+    print("=" * 80)
+    print("SPRINT-ASSIGNED VELOCITY")
+    print("Points committed to the sprint vs. completed\n")
+    print(f"  {'Sprint':<28} {'Window':<23} {'Committed':>10} {'Progress'}")
+    print("  " + "-" * 76)
+    for r in results:
+        label = f"{'→ ' if r['is_active'] else '  '}{r['name'][:26]}"
+        window = f"{r['start']} → {r['end']}"
+        committed = f"{r['committed_count']}st / {r['committed_pts']}pt"
+        progress = bar(r["completed_sprint_pts"], r["committed_pts"])
+        print(f"  {label:<28} {window:<23} {committed:>10}  {progress}")
+
+    # 7. Print throughput table
+    print(f"\n{'=' * 80}")
+    print("THROUGHPUT (all completed work in sprint window)")
+    print("Stories completed during each sprint's dates, regardless of sprint assignment\n")
+    print(f"  {'Sprint':<28} {'Window':<23} {'Throughput'}")
+    print("  " + "-" * 76)
+    for r in results:
+        label = f"{'→ ' if r['is_active'] else '  '}{r['name'][:26]}"
+        window = f"{r['start']} → {r['end']}"
+        tp = f"{r['throughput_count']} stories / {r['throughput_pts']} pts"
+        print(f"  {label:<28} {window:<23} {tp}")
+
+    # 8. Current sprint projection
+    active = next((r for r in results if r["is_active"]), None)
+    if active:
+        print(f"\n{'=' * 80}")
+        print("CURRENT SPRINT PROJECTION\n")
+        print(f"  Sprint:              {active['name']}")
+        print(f"  Committed:           {active['committed_count']} stories / {active['committed_pts']} pts")
+        print(f"  Completed so far:    {active['completed_sprint_count']} stories / {active['completed_sprint_pts']} pts")
+        if active["committed_pts"] > 0:
+            pct_done = active["completed_sprint_pts"] / active["committed_pts"] * 100
+            print(f"  Progress:            {bar(active['completed_sprint_pts'], active['committed_pts'])}")
+        print(f"\n  Historical avg completion rate:  {avg_completion_rate:.0%}")
+        print(f"  Historical avg throughput:       {avg_throughput:.0f} pts/sprint")
+        if active["committed_pts"] > 0:
+            projected = active["committed_pts"] * avg_completion_rate
+            print(f"  Projected completion:            {projected:.0f} / {active['committed_pts']} pts  ({avg_completion_rate:.0%})")
+            if avg_throughput > 0:
+                likelihood = min(avg_throughput / active["committed_pts"] * 100, 100)
+                print(f"  Throughput-based likelihood:     {likelihood:.0f}%")
+
+if __name__ == "__main__":
+    main()

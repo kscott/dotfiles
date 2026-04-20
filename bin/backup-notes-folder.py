@@ -2,8 +2,9 @@
 """
 backup-notes-folder.py
 
-Backs up ~/Notes to a DMG stored in iCloud Drive.
+Backs up ~/Notes to a DMG stored locally in ~/Backups.
 - Mounts the DMG, rsyncs ~/Notes to current/, saves deleted/changed files to backups/TIMESTAMP/
+- After a sync with changes, copies the DMG to iCloud as an offsite safety copy
 - Prunes backup folders older than BACKUP_TTL_DAYS
 - Trims log to LOG_MAX_LINES if needed
 - Prevents concurrent runs via lock file
@@ -13,7 +14,6 @@ Run every 30 minutes via launchd (com.kenscott.backup-notes.plist).
 """
 
 import atexit
-import os
 import shutil
 import subprocess
 import sys
@@ -23,7 +23,8 @@ from pathlib import Path
 
 # --- Config ---
 HOME = Path.home()
-DMG_PATH = HOME / "Library/Mobile Documents/com~apple~CloudDocs/Backups/notes-folder-backup.dmg"
+DMG_PATH = HOME / "Backups/notes-folder-backup.dmg"
+ICLOUD_BACKUP_PATH = HOME / "Library/Mobile Documents/com~apple~CloudDocs/Backups/notes-folder-backup.dmg"
 DMG_SIZE = "2g"
 DMG_VOLNAME = "notes-backup"
 MOUNT_POINT = Path(f"/Volumes/{DMG_VOLNAME}")
@@ -80,16 +81,11 @@ def create_dmg():
         str(DMG_PATH),
     ], check=True)
 
-def ensure_local():
-    """Force iCloud to download the DMG if it has been evicted to cloud-only storage."""
-    subprocess.run(["brctl", "download", str(DMG_PATH)], capture_output=True)
-
 def mount_dmg():
     if dmg_is_mounted():
         log("DMG already mounted — skipping attach")
         return
     log("Mounting DMG")
-    ensure_local()
     max_attempts = 3
     for attempt in range(1, max_attempts + 1):
         result = subprocess.run([
@@ -112,6 +108,12 @@ def unmount_dmg():
             capture_output=True,
         )
 
+def copy_to_icloud():
+    log("Copying DMG to iCloud for offsite safety")
+    ICLOUD_BACKUP_PATH.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(str(DMG_PATH), str(ICLOUD_BACKUP_PATH))
+    log("iCloud copy complete")
+
 # --- Rsync ---
 def run_rsync(dry_run=False):
     cmd = ["rsync", "-ac", "--delete", "--itemize-changes"] + RSYNC_EXCLUDES
@@ -126,10 +128,7 @@ def run_rsync(dry_run=False):
     return stdout.splitlines()
 
 def parse_changes(lines):
-    """Parse itemize-changes output into (action, filepath) pairs.
-    *deleting filepath  → deletion
-    >f........ filepath → file changed/added
-    """
+    """Parse itemize-changes output into (action, filepath) pairs."""
     changes = []
     for line in lines:
         if not line.strip():
@@ -197,7 +196,6 @@ def main():
         if saved:
             log(f"Saved {saved} file(s) to backups/{backup_dir.name}")
         else:
-            # Changes were all additions (nothing to save from dest)
             if backup_dir.exists():
                 shutil.rmtree(backup_dir)
 
@@ -211,6 +209,11 @@ def main():
     prune_old_backups()
     trim_log()
     log("Backup complete")
+
+    # Step 4: unmount cleanly, then copy to iCloud if anything changed
+    unmount_dmg()
+    if changes:
+        copy_to_icloud()
 
 
 if __name__ == "__main__":
