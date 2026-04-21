@@ -108,25 +108,53 @@ def probe_tag(m4b: Path, tag: str) -> str:
     return r.stdout.strip()
 
 
-def has_cover(m4b: Path) -> bool:
+def cover_codec(m4b: Path) -> str | None:
+    """Return the codec name of the embedded cover stream, or None if absent."""
     r = subprocess.run(
-        ["ffprobe", "-v", "quiet", "-show_entries", "stream=codec_type",
-         "-of", "default=nw=1:nk=1", str(m4b)],
+        ["ffprobe", "-v", "quiet", "-show_entries", "stream=codec_name,codec_type",
+         "-of", "default=nw=1", str(m4b)],
         capture_output=True, text=True,
     )
-    return "video" in r.stdout
+    lines = r.stdout.strip().splitlines()
+    codec = None
+    for line in lines:
+        if line.startswith("codec_name="):
+            codec = line.split("=", 1)[1]
+        elif line == "codec_type=video":
+            return codec
+    return None
+
+
+def extract_cover(m4b: Path) -> Path | None:
+    """Extract the embedded cover to a temp JPEG (converts PNG → JPEG if needed)."""
+    try:
+        tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+        tmp.close()
+        r = subprocess.run(
+            ["ffmpeg", "-y", "-i", str(m4b), "-map", "0:v", "-vframes", "1",
+             "-f", "image2", tmp.name],
+            capture_output=True,
+        )
+        if r.returncode == 0 and Path(tmp.name).stat().st_size > 0:
+            return Path(tmp.name)
+        Path(tmp.name).unlink(missing_ok=True)
+        return None
+    except Exception:
+        return None
 
 
 def existing_meta(m4b: Path) -> dict:
+    codec = cover_codec(m4b)
     return {
-        "title":     probe_tag(m4b, "title"),
-        "artist":    probe_tag(m4b, "artist"),
-        "album":     probe_tag(m4b, "album"),
-        "genre":     probe_tag(m4b, "genre"),
-        "year":      probe_tag(m4b, "date"),
-        "grouping":  probe_tag(m4b, "grouping"),
+        "title":      probe_tag(m4b, "title"),
+        "artist":     probe_tag(m4b, "artist"),
+        "album":      probe_tag(m4b, "album"),
+        "genre":      probe_tag(m4b, "genre"),
+        "year":       probe_tag(m4b, "date"),
+        "grouping":   probe_tag(m4b, "grouping"),
         "sort_album": probe_tag(m4b, "sort_album"),
-        "cover":     has_cover(m4b),
+        "cover":      codec is not None,
+        "cover_codec": codec,
     }
 
 
@@ -266,12 +294,13 @@ def audit(m4b: Path, calibre: dict, args) -> bool:
     clean_title  = itunes.get("title",  "").strip() or _strip_series_prefix(book_name)
     clean_artist = itunes.get("artist", "").strip() or author_name
 
-    needs_meta      = not (meta["genre"] and meta["year"] and meta["artist"] and meta["title"])
-    needs_cover     = not meta["cover"]
-    title_dirty     = bool(meta["title"]  and _norm(meta["title"])  != _norm(clean_title))
-    artist_dirty    = bool(author_name not in SKIP_ARTIST_NORM
-                           and meta["artist"] and _norm(meta["artist"]) != _norm(clean_artist))
-    needs_normalize = title_dirty or artist_dirty
+    needs_meta           = not (meta["genre"] and meta["year"] and meta["artist"] and meta["title"])
+    needs_cover          = not meta["cover"]
+    needs_cover_reformat = meta["cover_codec"] not in (None, "mjpeg")
+    title_dirty          = bool(meta["title"]  and _norm(meta["title"])  != _norm(clean_title))
+    artist_dirty         = bool(author_name not in SKIP_ARTIST_NORM
+                                and meta["artist"] and _norm(meta["artist"]) != _norm(clean_artist))
+    needs_normalize      = title_dirty or artist_dirty
 
     # Series tags from Calibre
     cal = calibre_lookup(calibre, book_name)
@@ -290,7 +319,7 @@ def audit(m4b: Path, calibre: dict, args) -> bool:
         )
     )
 
-    if not needs_meta and not needs_normalize and not needs_cover and not needs_series:
+    if not any([needs_meta, needs_normalize, needs_cover, needs_cover_reformat, needs_series]):
         return False
 
     merged = {
@@ -303,7 +332,9 @@ def audit(m4b: Path, calibre: dict, args) -> bool:
     }
 
     cover_path = None
-    if needs_cover:
+    if needs_cover_reformat:
+        cover_path = extract_cover(m4b) if args.fix else None
+    elif needs_cover:
         art_url = itunes.get("art_url", "")
         if art_url:
             cover_path = fetch_cover(art_url) if args.fix else None
@@ -319,7 +350,9 @@ def audit(m4b: Path, calibre: dict, args) -> bool:
             log.info("  NORM:   title %r → %r", meta["title"], clean_title)
         if artist_dirty:
             log.info("  NORM:   artist %r → %r", meta["artist"], clean_artist)
-    if needs_cover:
+    if needs_cover_reformat:
+        log.info("  COVER:  reformat %s → mjpeg", meta["cover_codec"])
+    elif needs_cover:
         log.info("  COVER:  %s", "will download" if itunes.get("art_url") else "not found on iTunes")
     if needs_series:
         log.info("  SERIES: grouping=%r sort-album=%r", desired_grouping, desired_sort_album)
