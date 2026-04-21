@@ -116,6 +116,13 @@ fi
 echo "==> Creating vim runtime directories"
 mkdir -p ~/.vim/{undo,backup,swap}
 
+echo "==> Installing npm global packages"
+if ! command -v mmdc &>/dev/null; then
+  npm install -g @mermaid-js/mermaid-cli --silent && echo "  installed mmdc" || echo "  failed: mmdc"
+else
+  echo "  ok  mmdc already present"
+fi
+
 echo "==> Setting up Ruby"
 CHRUBY_SH=""
 for _d in /opt/homebrew/share/chruby /usr/local/share/chruby; do
