@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-calibre-rename.py — Rename audiobooks using Calibre series data
+audiobook-rename.py — Rename audiobooks using Calibre series data
 
 Output format:
   Series NN - Title.m4b   (series books)
@@ -262,7 +262,7 @@ def main():
 
     calibre = load_calibre(CALIBRE_DB)
     mode = "LIVE" if args.fix else "DRY RUN"
-    print(f"=== calibre-rename [{mode}] ===")
+    print(f"=== audiobook-rename [{mode}] ===")
     print(f"Calibre: {sum(len(v) for v in calibre.values())} books indexed\n")
 
     if args.author:
@@ -286,6 +286,8 @@ def main():
             continue
 
         author_header_printed = False
+        series_used = {}  # series_name → first filename that used it
+
         for m4b in m4bs:
             tag_title = probe_title(m4b)
             result = (
@@ -302,6 +304,8 @@ def main():
                 continue
 
             cal_title, cal_series, cal_idx = result
+            if cal_series:
+                series_used.setdefault(cal_series, m4b.name)
             new_stem = make_filename(cal_title, cal_series, cal_idx)
             new_name = new_stem + ".m4b"
 
@@ -324,6 +328,21 @@ def main():
             if args.fix:
                 m4b.rename(target)
             renamed += 1
+
+        # Warn if the same author has books in multiple series that share a significant word —
+        # a sign that two series names in Calibre refer to the same real-world series.
+        if len(series_used) > 1:
+            series_names = list(series_used.keys())
+            for i, s1 in enumerate(series_names):
+                words1 = {w for w in re.split(r'\W+', s1.lower()) if len(w) > 3}
+                for s2 in series_names[i+1:]:
+                    words2 = {w for w in re.split(r'\W+', s2.lower()) if len(w) > 3}
+                    if words1 & words2:
+                        if not author_header_printed:
+                            print(f"[ {author_dir.name} ]")
+                            author_header_printed = True
+                        print(f"  WARN: possible series name conflict — "
+                              f"{s1!r} vs {s2!r}")
 
     print(f"\n=== Done [{mode}]: {renamed} {'renamed' if args.fix else 'to rename'}, "
           f"{already_correct} already correct, {not_found} not in Calibre, "

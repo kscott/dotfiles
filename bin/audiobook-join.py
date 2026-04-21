@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-join-audiobooks.py — Convert multi-file audiobook folders to single M4B
+audiobook-join.py — Convert multi-file audiobook folders to single M4B
 
 Finds book folders under ARCHIVE, concatenates all audio files into a single
 M4B with AAC audio, chapter markers at track boundaries, embedded cover art
@@ -347,11 +347,13 @@ def flatten_pass(archive: Path) -> int:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--author", metavar="NAME", help="Limit to one author folder")
+    parser.add_argument("--fix",    action="store_true", help="Apply joins (default is dry run)")
+    parser.add_argument("--author", metavar="NAME",      help="Limit to one author folder")
     args = parser.parse_args()
 
     setup_logging()
-    log.info("=== Audiobook join started ===")
+    mode = "LIVE" if args.fix else "DRY RUN"
+    log.info("=== audiobook-join started [%s] ===", mode)
     log.info("Archive: %s", ARCHIVE)
 
     if not ARCHIVE.exists():
@@ -379,18 +381,27 @@ def main():
             skipped += 1
             continue
 
+        audio_files = get_audio_files(book_dir)
+        if not args.fix:
+            log.info("WOULD JOIN (%d files): %s → %s", len(audio_files), book_dir.name, output.name)
+            success += 1
+            continue
+
         ok = convert_book(book_dir, output)
         if ok:
             success += 1
             shutil.rmtree(book_dir, ignore_errors=True)
             log.debug("  DELETED source: %s", book_dir)
         elif output.exists():
-            # convert_book already logged the failure and removed output
             errors += 1
         else:
             skipped += 1
 
-    log.info("=== Done: %d joined, %d skipped, %d failed ===", success, skipped, errors)
+    log.info("=== Done [%s]: %d %s, %d skipped, %d failed ===",
+             mode, success, "to join" if not args.fix else "joined", skipped, errors)
+    if not args.fix and success > 0:
+        log.info("    Run with --fix to apply.")
+        return
 
     log.info("=== Flatten pass ===")
     flattened = flatten_pass(ARCHIVE)

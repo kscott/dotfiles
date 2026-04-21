@@ -192,6 +192,13 @@ if [[ $MACHINE == "personal" ]]; then
   link bin/sort-downloads.sh          bin/sort-downloads.sh
   link bin/trinity-reminders          bin/trinity-reminders
   link bin/plex-export                bin/plex-export
+  link bin/audiobook-join.py          bin/audiobook-join.py
+  link bin/audiobook-tags.py          bin/audiobook-tags.py
+  link bin/audiobook-rename.py        bin/audiobook-rename.py
+  link bin/audiobook-calibre.py       bin/audiobook-calibre.py
+  link bin/music-blurbs.py            bin/music-blurbs.py
+  link bin/music-gap.py               bin/music-gap.py
+  link bin/music-rank.py              bin/music-rank.py
 fi
 
 # ── Work setup ─────────────────────────────────────────────────────────────────
