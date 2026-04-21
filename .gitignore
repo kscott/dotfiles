@@ -2,3 +2,6 @@ zsh/secrets.zsh
 zsh/cache/
 config/gh/hosts.yml
 claude-skills/team-metrics/node_modules/
+
+# Override global *tags* rule for scripts that legitimately contain "tags" in the name
+!bin/audiobook-tags.py
