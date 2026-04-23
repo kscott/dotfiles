@@ -14,6 +14,12 @@ PLEX_SERVER = 'http://192.168.1.35:32400'
 PLEX_CONFIG = os.path.expanduser('~/.config/plex/config')
 
 # Transliteration for composers stored in Cyrillic in MusicBrainz/beets
+ARTIST_ALIASES = {
+    'snoop doggy dogg': 'snoop dogg',
+    'elliott missy misdemeanor': 'missy elliott',
+    'missy misdemeanor elliott': 'missy elliott',
+}
+
 CYRILLIC_ALIASES = {
     'tchaikovsky': 'чайковский',
     'shostakovich': 'шостакович',
@@ -49,14 +55,13 @@ def normalize(s):
     return s
 
 def normalize_name(s):
-    """Also handle 'Lastname, Firstname' inversion."""
+    """Also handle 'Lastname, Firstname' inversion and known artist aliases."""
     s = s.strip()
-    # Invert only if comma is not part of a band name heuristic:
-    # treat as inversion if it looks like "Word, Word" without "&" or obvious band name
     if re.match(r'^[A-Z][a-z]+,\s+[A-Z]', s) and '&' not in s and len(s.split(',')) == 2:
         parts = s.split(',', 1)
         s = parts[1].strip() + ' ' + parts[0].strip()
-    return normalize(s)
+    n = normalize(s)
+    return ARTIST_ALIASES.get(n, n)
 
 def tokens(s):
     return {w for w in normalize_name(s).split() if len(w) > 2}

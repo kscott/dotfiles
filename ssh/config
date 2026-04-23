@@ -4,7 +4,7 @@ Host *
   IdentityFile ~/.ssh/id_rsa
 
 Host plex
-  HostName 192.168.0.34
+  HostName 192.168.1.35
   User ken
   IdentityFile ~/.ssh/id_ed25519
   IdentitiesOnly yes

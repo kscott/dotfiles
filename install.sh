@@ -148,20 +148,20 @@ echo "==> Installing crontab"
 crontab $DOTFILES/crontab
 echo "  installed"
 
-echo "==> Installing LaunchAgents"
-mkdir -p "$HOME/Library/LaunchAgents"
-for plist in $DOTFILES/launchagents/*.plist; do
-  name=$(basename $plist)
-  dst="$HOME/Library/LaunchAgents/$name"
-  cp $plist $dst
-  launchctl unload $dst 2>/dev/null || true
-  launchctl load $dst
-  echo "  loaded $name"
-done
-
 # ── Personal setup ─────────────────────────────────────────────────────────────
 
 if [[ $MACHINE == "personal" ]]; then
+  echo "==> Installing LaunchAgents"
+  mkdir -p "$HOME/Library/LaunchAgents"
+  for plist in $DOTFILES/launchagents/personal/*.plist; do
+    name=$(basename $plist)
+    dst="$HOME/Library/LaunchAgents/$name"
+    cp $plist $dst
+    launchctl unload $dst 2>/dev/null || true
+    launchctl load $dst
+    echo "  loaded $name"
+  done
+
   echo "==> Installing Homebrew packages (personal)"
   brew bundle --file="$DOTFILES/Brewfile.personal"
 
@@ -199,6 +199,7 @@ if [[ $MACHINE == "personal" ]]; then
   link bin/music-blurbs.py            bin/music-blurbs.py
   link bin/music-gap.py               bin/music-gap.py
   link bin/music-rank.py              bin/music-rank.py
+  link bin/archive-session-log.py    bin/archive-session-log.py
 fi
 
 # ── Work setup ─────────────────────────────────────────────────────────────────
@@ -208,6 +209,17 @@ if [[ $MACHINE == "work" ]]; then
   mkdir -p $HOME/bin
   link bin/backup-ai-folder.py    bin/backup-ai-folder.py
   link bin/backup-notes-folder.py bin/backup-notes-folder.py
+
+  echo "==> Installing LaunchAgents"
+  mkdir -p "$HOME/Library/LaunchAgents"
+  for plist in $DOTFILES/launchagents/work/*.plist; do
+    name=$(basename $plist)
+    dst="$HOME/Library/LaunchAgents/$name"
+    cp $plist $dst
+    launchctl unload $dst 2>/dev/null || true
+    launchctl load $dst
+    echo "  loaded $name"
+  done
 fi
 
 # ── Next steps ─────────────────────────────────────────────────────────────────
@@ -245,3 +257,8 @@ echo ""
 if [[ -d $BACKUP ]]; then
   echo "Backed up old files to: $BACKUP"
 fi
+
+echo ""
+echo "Apps to install manually:"
+echo ""
+glow "$DOTFILES/apps.$MACHINE.md" 2>/dev/null || cat "$DOTFILES/apps.$MACHINE.md"

@@ -19,47 +19,23 @@ You are wrapping up a Claude Code session for Ken Scott. Complete all steps in o
 
 ---
 
-### Step 1: Check calendar and reminders
+### Step 1: Check calendar
 
 Use the hostname to determine which commands to run.
 
 **Home Mac (Mac-mini):**
 
 ```bash
-get-clear recap today
+calendar personal today
 ```
-
-This shows today's calendar events and activity log in one view. Use it to surface meetings and completed work that should be logged.
 
 **Work Mac (any other hostname):**
 
 ```bash
-uv run --with "google-workspace @ git+ssh://git@github.com/Ibotta/google-workspace-py.git" python3 << 'EOF'
-from google_workspace import CalendarClient
-from datetime import datetime
-from zoneinfo import ZoneInfo
-
-cal = CalendarClient()
-tz = ZoneInfo("America/Denver")
-today = datetime.now(tz)
-start = today.replace(hour=0, minute=0, second=0, microsecond=0)
-end = today.replace(hour=23, minute=59)
-
-events = cal.get_events(start_date=start, end_date=end)
-for e in events:
-    t = e.get('start', {}).get('dateTime', e.get('start', {}).get('date', ''))
-    t_end = e.get('end', {}).get('dateTime', '')
-    print(f"{t[11:16]}–{t_end[11:16]}  {e['summary']}")
-EOF
-
-reminders what today
-reminders list Ibotta
+calendar work today
 ```
 
-`reminders what today` catches anything touched via the CLI during the session.
-`reminders list Ibotta` shows what's still open — useful for spotting items completed manually in the Reminders app (they'll be absent from the list).
-
-Ask the user which meetings they attended and whether any reminders were completed during the session. Note any corrections. Do NOT mark reminders done via CLI — the user has already done that.
+This shows today's events for the relevant calendar set. Ask the user which meetings they attended so they can be logged in doing.
 
 ---
 

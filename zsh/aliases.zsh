@@ -30,3 +30,5 @@ alias mdv='glow'
 alias claude='$HOME/.local/bin/claude --continue'
 alias claude-new='$HOME/.local/bin/claude'
 alias c='$HOME/.local/bin/claude'
+
+alias gc='cd ~/dev/get-clear && $HOME/.local/bin/claude'
