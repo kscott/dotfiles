@@ -162,6 +162,21 @@ Metrics folder: ~/Documents/Team Metrics/
 
 ---
 
+## Week convention
+
+**Weeks run Monday–Sunday.** When the user says "team metrics" with no explicit date range,
+default to the most recent completed Monday–Sunday week (i.e., last Mon–Sun, not Mon–Fri).
+
+- `start` = most recent Monday (e.g. 2026-04-13)
+- `end`   = the Sunday of that same week (e.g. 2026-04-19)
+- `working_days` = 5 (Mon–Fri only — weekends are excluded from all calculations per the
+  weekend rule below, but the label and archive filename use the full Mon–Sun range)
+
+To find the correct Monday: check `date` via Bash. If today is Sunday, last Monday is
+6 days ago. If today is Monday, last Monday is 7 days ago.
+
+---
+
 ## Step-by-step workflow
 
 ### Step 1 — Parse inputs

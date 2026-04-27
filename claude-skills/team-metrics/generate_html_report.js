@@ -193,12 +193,11 @@ function prTable(prs) {
 function reviewTable(reviews) {
   if (!reviews.length) return '<p class="empty">No reviews this week</p>';
   return `<table class="dt"><thead><tr>
-    <th>PR #</th><th>Title</th><th>Repo</th><th>Date</th>
+    <th>PR #</th><th>Title</th><th>Repo</th>
   </tr></thead><tbody>${reviews.map(r => `<tr>
     <td class="mono">#${esc(r.pr)}</td>
     <td>${esc(r.title)}</td>
     <td class="mono sm">${esc(r.repo)}</td>
-    <td class="nw">${esc(r.date)}</td>
   </tr>`).join('')}</tbody></table>`;
 }
 

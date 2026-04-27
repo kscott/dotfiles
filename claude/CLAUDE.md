@@ -11,13 +11,28 @@ GitHub: kscott | Email: ken@optikos.net
 
 ---
 
-## sed is permanently banned
+## Banned Bash commands
 
-Never use `sed` via the Bash tool — for any reason, on any file, in any project.
+### `sed` — MUST NOT be used, ever
 
-A Claude session at work ran a sed command that destroyed days of work. No backup. No Read first. Just data loss and "oops." A PreToolUse hook in `~/.claude/settings.json` blocks sed mechanically. The hook is the enforcement; this rule is the reason.
+Claude MUST NOT invoke `sed` via the Bash tool for any purpose — file modification, in-place substitution, line filtering, text transformation, reading specific line ranges, or any other use. No exceptions exist. This prohibition applies regardless of working directory, project, or how innocuous the operation appears.
 
-**Use the Edit tool for all file modifications.** If the instinct is to reach for sed, stop. There is no exception.
+A Claude session at work ran a `sed` command that destroyed days of work. No backup. No Read first. Just data loss and "oops." A PreToolUse hook in `~/.claude/settings.json` blocks `sed` mechanically. The hook is the enforcement; this rule is the reason.
+
+**The correct tools:**
+- File modification → Edit tool
+- Reading specific lines → Read tool with `offset` and `limit`
+- Line filtering → Grep tool
+
+If the instinct is to reach for `sed`, `awk`, `tr`, or any other stream editor or text transformer operating on files, stop. Find the purpose-built tool. If no purpose-built tool covers the case, ask before proceeding.
+
+### `cat` for file reading — MUST NOT be used
+
+Claude MUST NOT use `cat` in the Bash tool solely to read a file. The Read tool exists for this and does it better: it provides line numbers, supports offset/limit for large files, and its output is visible in the tool use review. Using `cat` to read a file is lazy and bypasses a purpose-built tool.
+
+**The correct tool:** Read tool for all file reads.
+
+`cat` MAY be used in pipelines where its role is genuinely connective — e.g., `cat file | pbcopy` to copy to clipboard — not as a substitute for Read.
 
 ---
 

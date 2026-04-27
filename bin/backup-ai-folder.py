@@ -111,7 +111,16 @@ def unmount_dmg():
 def copy_to_icloud():
     log("Copying DMG to iCloud for offsite safety")
     ICLOUD_BACKUP_PATH.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(str(DMG_PATH), str(ICLOUD_BACKUP_PATH))
+    # shutil.copy2 is blocked by TCC when run from launchd — Finder has iCloud access
+    script = (
+        f'tell application "Finder" to duplicate '
+        f'POSIX file "{DMG_PATH}" '
+        f'to folder POSIX file "{ICLOUD_BACKUP_PATH.parent}" '
+        f'with replacing'
+    )
+    result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"osascript copy failed: {result.stderr.strip()}")
     log("iCloud copy complete")
 
 # --- Rsync ---
