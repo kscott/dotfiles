@@ -11,7 +11,7 @@ NOTES_DIR  = '/Users/ken/Notes/personal'
 CACHE_FILE = os.path.join(NOTES_DIR, 'album-blurbs.json')
 PLEX_CONFIG = os.path.expanduser('~/.config/plex/config')
 
-DISCOGS_TOKEN = 'gHlISYPPDanSrIxavZIBwQfFdrVZyDuBYYSAZXVd'
+DISCOGS_TOKEN = os.environ.get('DISCOGS_TOKEN', '')
 UA = 'MusicBlurbFetcher/1.0 (ken@optikos.net)'
 
 # ---------------------------------------------------------------------------
@@ -165,6 +165,11 @@ def main():
     parser.add_argument('--limit', type=int, default=0, help='Only fetch N new blurbs (0=all)')
     parser.add_argument('--delay', type=float, default=1.0, help='Seconds between requests')
     args = parser.parse_args()
+
+    if not DISCOGS_TOKEN:
+        import sys
+        print("Error: DISCOGS_TOKEN not set. Add it to ~/.zsh/secrets.zsh", file=sys.stderr)
+        sys.exit(1)
 
     cache = load_cache()
     missing = load_missing()
