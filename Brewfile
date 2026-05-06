@@ -41,9 +41,5 @@ cask "font-fira-sans"
 cask "font-source-code-pro"
 cask "font-source-sans-3"
 
-# Swift
-brew "swiftlint"
-brew "swiftformat"
-
 # JavaScript
 brew "node"

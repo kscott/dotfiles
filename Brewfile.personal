@@ -10,6 +10,10 @@ brew "yt-dlp"       # YouTube/video metadata + download (used by tab-capture not
 brew "imagemagick"  # image processing — deskew scanned docs, etc.
 brew "ghostscript"  # PDF rendering (required by imagemagick for PDF input)
 
+# Swift
+brew "swiftlint"
+brew "swiftformat"
+
 # Transcription
 # whisper-cli: install from source — see https://github.com/ggerganov/whisper.cpp
 # Model: ~/.whisper/ggml-medium.en.bin
