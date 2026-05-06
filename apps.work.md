@@ -2,9 +2,28 @@
 
 Apps that can't be installed via Homebrew. Review and install these after running install.sh.
 
+## Command Line Tools
+
+```
+xcode-select --install
+```
+
+## App Store
+
+- MindNode
+- Marked 2
+- Keynote
+- Pages
+- Numbers
+
 ## Direct Download
 
 - iTerm2 — install from Ibotta Self-Service app
+- Moom — from vendor
+- Bartender — from vendor
+- BetterTouchTool — from vendor
+- AlDente — from vendor
+- LaunchBar — from vendor
 
 ## Claude Code Plugins
 
