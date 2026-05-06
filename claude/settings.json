@@ -1,11 +1,4 @@
 {
-  "statusLine": {
-    "type": "command",
-    "command": "/Users/ken/bin/claude-status.sh"
-  },
-  "enabledPlugins": {
-    "swift-lsp@claude-plugins-official": true
-  },
   "hooks": {
     "PreToolUse": [
       {
@@ -27,5 +20,13 @@
         ]
       }
     ]
-  }
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "/Users/ken/bin/claude-status.sh"
+  },
+  "enabledPlugins": {
+    "swift-lsp@claude-plugins-official": true
+  },
+  "theme": "dark-ansi"
 }
