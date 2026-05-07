@@ -49,7 +49,7 @@ link() {
 # ── Core setup (all machines) ──────────────────────────────────────────────────
 
 echo "==> Creating standard directories"
-mkdir -p $HOME/dev $HOME/bin $HOME/Notes
+mkdir -p $HOME/dev $HOME/bin $HOME/Notes $HOME/logs
 mkdir -p "$HOME/Library/Mobile Documents/com~apple~CloudDocs/Productivity"
 [[ -L $HOME/iCloud ]] || ln -s "$HOME/Library/Mobile Documents/com~apple~CloudDocs" $HOME/iCloud
 
