@@ -223,14 +223,6 @@ function channelTable(channels) {
   </tr>`).join('')}</tbody></table>`;
 }
 
-function standupSection(days) {
-  if (!days || days.length === 0) return '<p class="empty">No standup entries for this period</p>';
-  return days.map(d => `
-    <div class="su-day">
-      <div class="su-date">${esc(d.date)}</div>
-      <ul class="su-list">${d.bullets.map(b => `<li>${esc(b)}</li>`).join('')}</ul>
-    </div>`).join('');
-}
 
 function confluenceTable(pages) {
   if (!pages.length) return '<p class="empty">No Confluence activity this week</p>';
@@ -284,13 +276,6 @@ function memberCard(m) {
       ${highlights}
       ${m.focus ? `<p class="focus-line">🎯 ${esc(m.focus)}</p>` : ''}
     </div>
-
-    <details class="ds" open>
-      <summary class="ds-sum">Standups
-        <span class="ds-cnt">${m.standup.length} day(s) captured</span>
-      </summary>
-      <div class="ds-body su-wrap">${standupSection(m.standup)}</div>
-    </details>
 
     <details class="ds" open>
       <summary class="ds-sum">GitHub PRs
@@ -464,6 +449,10 @@ a { color: #3B82F6; text-decoration: none; }
                gap: 16px; margin-bottom: 24px; }
 .chart-card { background: #fff; border-radius: 10px; padding: 20px;
               border: 1px solid #E2E8F0; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.mtg-legend { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+              margin: 8px 0 0; font-size: 11px; color: #64748B; }
+.mtg-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+           margin-right: 3px; vertical-align: middle; }
 .chart-title { font-size: 13px; font-weight: 700; color: #334155;
                text-transform: uppercase; letter-spacing: .4px; margin-bottom: 16px; }
 .chart-wrap { position: relative; height: 220px; }
@@ -506,13 +495,6 @@ details[open] > .ds-sum::before { transform: rotate(90deg); }
 .sub-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
            color: #64748B; margin-bottom: 8px; }
 
-/* ── Standups ── */
-.su-wrap { display: flex; flex-direction: column; gap: 10px; }
-.su-day { border-left: 3px solid #E2E8F0; padding-left: 12px; }
-.su-date { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
-           color: #64748B; margin-bottom: 4px; }
-.su-list { margin: 0; padding-left: 16px; }
-.su-list li { font-size: 13px; color: #334155; line-height: 1.55; margin-bottom: 2px; }
 .mt { margin-top: 14px; }
 
 /* ── Tables ── */
@@ -615,6 +597,11 @@ details[open] > .ds-sum::before { transform: rotate(90deg); }
     <div class="chart-card">
       <div class="chart-title">📅 Meeting Load</div>
       <div class="chart-wrap"><canvas id="chartMeetings"></canvas></div>
+      <div class="mtg-legend">
+        <span><span class="mtg-dot" style="background:#10B981"></span>&lt;50% normal</span>
+        <span><span class="mtg-dot" style="background:#F59E0B"></span>50–74% elevated</span>
+        <span><span class="mtg-dot" style="background:#EF4444"></span>75%+ high</span>
+      </div>
     </div>
     <div class="chart-card">
       <div class="chart-title">🔀 GitHub Activity</div>
@@ -677,7 +664,7 @@ new Chart(document.getElementById('chartMeetings'), {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10 } },
+      legend: { display: false },
       tooltip: {
         callbacks: {
           afterBody(ctx) {

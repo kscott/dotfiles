@@ -33,7 +33,7 @@ missing, run the corresponding setup steps below before collecting data.
 
 | Plugin | Purpose | Install command |
 |--------|---------|-----------------|
-| **`google-workspace@ibotta`** | Google Calendar (meetings, OOO) + Google Drive sync | `claude mcp add google-workspace@ibotta` |
+| **Google Calendar MCP** | Google Calendar (meetings, OOO) — built-in claude.ai MCP | Already available — no install needed |
 | **`atlassian-api@ibotta`** | Jira tickets + Confluence pages (direct API, no MCP) | `claude mcp add atlassian-api@ibotta` |
 | **Slack MCP** | Slack message counts per channel | Configure in Claude settings |
 | **`gh` CLI** | GitHub PRs, reviews, commits (primary data source) | `brew install gh && gh auth login` |
@@ -127,12 +127,11 @@ Install the plugin:
 claude mcp add atlassian-api@ibotta
 ```
 
-### 6. Set up Google Workspace plugin (Calendar + Drive)
+### 6. Google Calendar
 
-```bash
-claude mcp add google-workspace@ibotta
-/google-workspace:setup    # one-time OAuth browser sign-in
-```
+No setup needed. Calendar data is fetched via the built-in Google Calendar MCP
+(`mcp__claude_ai_Google_Calendar__list_events`), which is already authenticated
+through your claude.ai account.
 
 ### 7. Connect the Slack MCP in Claude settings
 
@@ -167,13 +166,31 @@ Metrics folder: ~/Documents/Team Metrics/
 **Weeks run Monday–Sunday.** When the user says "team metrics" with no explicit date range,
 default to the most recent completed Monday–Sunday week (i.e., last Mon–Sun, not Mon–Fri).
 
-- `start` = most recent Monday (e.g. 2026-04-13)
-- `end`   = the Sunday of that same week (e.g. 2026-04-19)
-- `working_days` = 5 (Mon–Fri only — weekends are excluded from all calculations per the
-  weekend rule below, but the label and archive filename use the full Mon–Sun range)
+- `start` = most recent completed Monday (YYYY-MM-DD)
+- `end`   = the Sunday of that same week (YYYY-MM-DD)
+- `working_days` = 5 (Mon–Fri only — weekends are excluded from all calculations)
 
-To find the correct Monday: check `date` via Bash. If today is Sunday, last Monday is
-6 days ago. If today is Monday, last Monday is 7 days ago.
+**Always compute the Monday date with actual date math — never guess.**
+
+Run this first, every time:
+
+```bash
+python3 -c "
+from datetime import date, timedelta
+today = date.today()
+# weekday(): Mon=0, Sun=6
+days_since_monday = today.weekday()
+# 'last week' = the Mon-Sun week that ended before this week started
+last_monday = today - timedelta(days=days_since_monday + 7)
+last_sunday = last_monday + timedelta(days=6)
+print('Today:', today, today.strftime('%A'))
+print('Last week Mon:', last_monday)
+print('Last week Sun:', last_sunday)
+"
+```
+
+Use the printed `Last week Mon` and `Last week Sun` as `start` and `end`. Do not proceed
+until you have confirmed the actual day-of-week from this output.
 
 ---
 
@@ -188,10 +205,16 @@ Extract from the user's request:
 
 "This week" = current Mon–Fri. "Last week" = previous Mon–Fri.
 
-> **Weekend rule**: Saturday and Sunday are **always excluded** from all calculations —
-> meetings, OOO days, Slack messages, Jira activity, everything. Even if the user
-> provides a date range that spans a weekend, only Mon–Fri dates are processed.
-> Never count, display, or include any activity that falls on a Saturday or Sunday.
+> **Weekend rule**: Saturday and Sunday are **excluded from all capacity math** —
+> meeting hours, OOO days, available hours, Jira ticket counts — because those
+> calculations assume a 5-day workweek.
+>
+> **However**, weekend Slack or GitHub activity is a signal that something was wrong —
+> an incident, a crunch, or an on-call fire. **Do not silently discard it.**
+> Instead, surface it: if a team member posted Slack messages or opened/merged PRs
+> on Saturday or Sunday, flag it in their card as a `"weekend_activity"` note
+> (e.g. `"Slack messages Saturday Apr 26"`, `"PR merged Sunday Apr 27"`).
+> This is not a metric to optimize — it's a health indicator.
 
 Load `team_config.json` to resolve names to system identifiers.
 Calculate `working_days` = count of Mon–Fri in [start, end]. **Never count Sat/Sun.**
@@ -209,21 +232,38 @@ Initialize `metrics_data.json`:
 
 ### Step 2 — Google Calendar (meetings & OOO)
 
-**Count meetings**: events where the member is an accepted attendee. Exclude:
-- **Any event on Saturday or Sunday** — weekends are never counted
-- All-day events (home/office location markers, OOO)
-- Focus time / deep work blocks
-- Clockwise-generated events (lunch blocks, focus time, team headsdown blocks)
-- Events the member has declined
-- Solo reminders or personal events
+Use the **`mcp__claude_ai_Google_Calendar__list_events`** MCP tool. Call all members in
+parallel — one call per person, using their `calendar_id` (email) from config.
 
-**Count meeting hours**: sum duration of events where:
-- Not an all-day event
-- Not transparent / free / declined by the member
-- Not a Clockwise-generated block (❇️ prefix or "Clockwise" in title)
-- Not a solo event (≤1 attendee — check `len(attendees)`, not `numAttendees`)
-- Not a heads-down/focus block by name (e.g. "headsdown", "focus time", "do not book")
-- Not a personal reminder or out-of-office event
+```
+list_events(
+  calendarId = member.calendar_id,
+  startTime  = "<start>T00:00:00",
+  endTime    = "<end+1day>T00:00:00",   # exclusive upper bound covers full Sunday
+  timeZone   = "America/Denver",
+  pageSize   = 250
+)
+```
+
+Apply these rules to each event to decide whether to count it as a meeting:
+
+**Skip** (never count):
+- `start.date` present (all-day event) — use separately for OOO detection
+- `eventType` is `"focusTime"` or `"outOfOffice"` (timed OOO/focus blocks)
+- `transparency` is `"transparent"` (shows as free)
+- Member's `responseStatus` is `"declined"`
+- `status` is `"cancelled"`
+- Title matches Clockwise/lunch/focus heuristic: contains any of `lunch`, `❇️`,
+  `clockwise`, `focus time`, `headsdown`, `heads down`, `heads-down`, `do not book`,
+  `deep work`
+- Event falls on Saturday or Sunday (check `start.dateTime` day-of-week)
+- Zero attendees (`attendees` field absent or empty) AND no `recurringEventId`
+
+**Count** everything else as a meeting; sum `(end.dateTime - start.dateTime)` in hours.
+
+**OOO days**: scan all-day events (`start.date` present) for titles containing `ooo`,
+`out of office`, `vacation`, `pto`. Count unique Mon–Fri calendar dates blocked.
+Also accept `eventType == "outOfOffice"` on all-day events.
 
 Compute:
 ```
@@ -232,9 +272,7 @@ meeting_pct     = round(total_meeting_hours / available_hours * 100)
 avg_hrs_per_day = total_meeting_hours / max(working_days - ooo_days, 1)
 ```
 
-**Count OOO days**: look for all-day events with "Out of Office", "OOO", or
-"Vacation" in the title during [start, end]. Count unique **weekdays** (Mon–Fri) blocked.
-**Never count Saturday or Sunday as OOO days**, even if the event spans the weekend.
+Write to `metrics_data.json → members[name].calendar`.
 
 #### GitHub PRs — gh CLI (primary method for Ibotta)
 
@@ -313,12 +351,20 @@ Writes to `metrics_data.json → members[name].jira` and `members[name].confluen
 > results). If 60 results are reached and there are still more, display the count as
 > **"60+"** rather than "60" in all reports.
 
-Search for messages from the member in each channel they're active in,
-**scoped to Mon–Fri only** (never include Saturday or Sunday messages):
+Search for messages from the member using their **Slack ID** from `team_config.json`
+(`slack_id` field). **Always use `<@ID>` format — never use `slack_handle` for searches.**
+Scoped to Mon–Fri only (never include Saturday or Sunday messages):
+
 ```
-from:<slack_handle> after:<start_minus_1_day> before:<end_plus_1_day>
+from:<@SLACK_ID> after:<start_minus_1_day> before:<end_plus_1_day>
 ```
-When counting results, discard any messages whose timestamp falls on a Saturday or Sunday.
+
+Example: `from:<@U038HFBCMCJ> after:2026-04-26 before:2026-05-02`
+
+When counting results for `total_messages` and per-channel breakdowns, count **only Mon–Fri
+messages**. But do **not discard** weekend messages — if any exist, note them separately as
+`"weekend_activity"` on the member's data (date + channel). Weekend Slack activity is a
+health flag, not a metric to sum.
 
 **Pagination**: for each search, paginate up to 3 pages (passing `cursor` from each response) to collect up to 60 results. Stop early if a page returns fewer than 20 results. If all 3 pages are full (60 results) and a cursor still exists, record and display the count as `"60+"` to signal it is capped.
 
@@ -380,8 +426,8 @@ Content Squad schedule IDs:
 
 ```bash
 source ~/.zshrc
-PYTHONPATH="/Users/ken.scott/.claude/plugins/cache/ibotta/pagerduty-api/1.0.0/src" \
-uv run --with requests python3 -c "
+PYTHONPATH="/Users/ken.scott/.claude/plugins/marketplaces/ibotta/plugins/pagerduty-api/src" \
+/opt/homebrew/bin/uv run --with requests python3 -c "
 from pagerduty import SchedulesClient, PagerDutyConfig
 config = PagerDutyConfig.from_env()
 schedules = SchedulesClient(config)
@@ -405,31 +451,6 @@ The script checks both and merges, so OOO on either calendar is counted.
 
 ---
 
-### Step 8 — Obsidian standups (optional)
-
-If `obsidian_standup_file` is set in `team_config.json` and the file exists, run:
-
-```bash
-node <metrics-folder>/parse_standup.js \
-  --config  <metrics-folder>/team_config.json \
-  --file    <standup-file-path> \
-  --members ALL \
-  --start   2026-03-16 \
-  --end     2026-03-20 \
-  --out     <metrics-folder>/metrics_data.json
-```
-
-Parses daily standup entries per person from the Obsidian markdown file and writes
-bullet summaries to `metrics_data.json → members[name].standup`.
-
-Expected format in the standup file:
-```markdown
-3/16
-- Erin - PAPI demo prep, EMDash work, Flights epic loose ends
-- Emily - Meetings, wrapping ENBL-1103/1105
-```
-
----
 
 ### Step 7 — Generate reports
 
