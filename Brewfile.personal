@@ -17,3 +17,8 @@ brew "swiftformat"
 # Transcription
 # whisper-cli: install from source — see https://github.com/ggerganov/whisper.cpp
 # Model: ~/.whisper/ggml-medium.en.bin
+
+# Swift tools
+brew "swiftlint"
+brew "swiftformat"
+

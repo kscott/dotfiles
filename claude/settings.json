@@ -26,7 +26,23 @@
     "command": "/Users/ken/bin/claude-status.sh"
   },
   "enabledPlugins": {
-    "swift-lsp@claude-plugins-official": true
+    "swift-lsp@claude-plugins-official": true,
+    "slack@claude-plugins-official": true
   },
-  "theme": "dark-ansi"
+  "extraKnownMarketplaces": {
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    },
+    "ibotta": {
+      "source": {
+        "source": "github",
+        "repo": "ibotta/claude-plugins"
+      }
+    }
+  },
+  "theme": "dark-ansi",
+  "model": "sonnet[1m]"
 }
