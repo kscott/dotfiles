@@ -103,8 +103,6 @@ handle_music() {
         cp -r "$path" "$MUSIC_INBOX/" && log "  Copied"
     fi
 
-    log "Triggering beet import on plex"
-    ssh plex 'PATH=/usr/local/bin:$PATH /usr/local/bin/beet import -q -I /Volumes/Music/Inbox' >> "$LOG" 2>&1
 }
 
 handle_video() {
