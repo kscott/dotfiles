@@ -116,6 +116,19 @@ fi
 echo "==> Creating vim runtime directories"
 mkdir -p ~/.vim/{undo,backup,swap}
 
+echo "==> Installing claude-statusline"
+if [[ ! -f $HOME/.local/bin/claude-statusline ]]; then
+  curl --create-dirs -sSLo ~/.local/bin/claude-statusline \
+    "https://github.com/TheoBrigitte/claude-statusline/releases/latest/download/claude-statusline.darwin-arm64"
+  chmod +x ~/.local/bin/claude-statusline
+  echo "  installed claude-statusline"
+else
+  echo "  ok  claude-statusline already present"
+fi
+
+echo "==> Linking claude-statusline config"
+link config/claude-statusline.toml .config/claude-statusline.toml
+
 echo "==> Installing npm global packages"
 if ! command -v mmdc &>/dev/null; then
   npm install -g @mermaid-js/mermaid-cli --silent && echo "  installed mmdc" || echo "  failed: mmdc"
