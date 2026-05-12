@@ -20,17 +20,21 @@ branch=$(git -C "$cwd" symbolic-ref --short HEAD 2>/dev/null \
       || git -C "$cwd" describe --tags --exact-match 2>/dev/null \
       || echo "detached")
 
-# Shortened path: replace $HOME with ~, abbreviate intermediate components
+# Shortened path: replace $HOME with ~
+# - One level deep (~/foo): show full
+# - Deeper: abbreviate intermediate components to first char, keep last full
 short_path="${cwd/#$HOME/\~}"
 IFS='/' read -ra parts <<< "$short_path"
 n=${#parts[@]}
-short=""
-for (( i=0; i<n-1; i++ )); do
-  [[ -z "${parts[$i]}" ]] && continue
-  short+="${parts[$i]:0:1}/"
-done
-short+="${parts[$n-1]}"
-folder="$short"
+if [[ $n -le 2 ]]; then
+  folder="$short_path"
+else
+  folder="${parts[0]}/"
+  for (( i=1; i<n-1; i++ )); do
+    folder+="${parts[$i]:0:1}/"
+  done
+  folder+="${parts[$n-1]}"
+fi
 
 # Dirty state (staged + unstaged + untracked)
 dirty=$(( \
