@@ -23,7 +23,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "claude-statusline"
+    "command": "claude-statusline --config ~/.config/claude-statusline.toml"
   },
   "enabledPlugins": {
     "swift-lsp@claude-plugins-official": true,
