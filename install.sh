@@ -243,6 +243,20 @@ echo "       gh ssh-key add ~/.ssh/id_ed25519.pub --title \"\$(scutil --get Comp
 echo "  4. iTerm2: quit iTerm2, run: python3 ~/bin/fix-claude-iterm-colors.py, then relaunch"
 echo "  5. Reminders CLI: gh repo clone kscott/reminders-cli ~/dev/reminders-cli && ~/dev/reminders-cli/reminders setup"
 
+if [[ $MACHINE == "work" ]]; then
+  echo ""
+  echo "Next steps (work Mac):"
+  echo "  6. Set up manager-bot:"
+  echo "       git clone git@github.com:Ibotta/manager-bot.git ~/dev/manager-bot"
+  echo "       git -C ~/dev/manager-bot checkout kscott/manager-bot-content-customized"
+  echo "       # Unlock team.yaml: open Passwords, find 'git-crypt manager-bot',"
+  echo "       # copy the password, then run:"
+  echo "       echo '<paste key>' | base64 -d > /tmp/mgr-bot.key"
+  echo "       git -C ~/dev/manager-bot git-crypt unlock /tmp/mgr-bot.key && rm /tmp/mgr-bot.key"
+  echo "       cd ~/dev/manager-bot && uv sync"
+  echo "       uv run scripts/setup_google_auth.py"
+fi
+
 if [[ $MACHINE == "personal" ]]; then
   echo ""
   echo "Next steps (personal Mac):"

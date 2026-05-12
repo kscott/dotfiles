@@ -4,6 +4,8 @@
 brew "git"
 brew "vim"
 brew "python@3.14"
+brew "uv"            # Python package manager (used by manager-bot)
+brew "git-crypt"     # encrypt secrets committed to git repos
 
 # Shell
 brew "starship"
