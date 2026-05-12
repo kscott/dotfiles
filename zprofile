@@ -19,6 +19,8 @@ path=(
   $path
 )
 
+export HOMEBREW_NO_ENV_HINTS=1
+
 export LESS='-g -i -M -R -S -w -X -z-4'
 
 if (( $#commands[(i)lesspipe(|.sh)] )); then
