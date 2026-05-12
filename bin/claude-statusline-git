@@ -26,7 +26,7 @@ branch=$(git -C "$cwd" symbolic-ref --short HEAD 2>/dev/null \
 short_path="${cwd/#$HOME/\~}"
 IFS='/' read -ra parts <<< "$short_path"
 n=${#parts[@]}
-if [[ $n -le 2 ]]; then
+if [[ $n -le 3 ]]; then
   folder="$short_path"
 else
   folder="${parts[0]}/"
