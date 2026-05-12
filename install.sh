@@ -229,6 +229,7 @@ if [[ $MACHINE == "work" ]]; then
   mkdir -p $HOME/bin
   link bin/backup-ai-folder.py    bin/backup-ai-folder.py
   link bin/backup-notes-folder.py bin/backup-notes-folder.py
+  link bin/claude-statusline-git  bin/claude-statusline-git
 
   echo "==> Installing LaunchAgents"
   mkdir -p "$HOME/Library/LaunchAgents"

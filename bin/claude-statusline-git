@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Wrapper for claude-statusline that appends a git info line.
+# Reads Claude Code's JSON payload from stdin, passes it to claude-statusline,
+# then adds branch / folder / dirty state / ahead-behind from the session cwd.
+
+input=$(cat)
+
+# Main statusline (two rows)
+printf '%s' "$input" | "$HOME/.local/bin/claude-statusline" --config "$HOME/.config/claude-statusline.toml"
+
+# Extract cwd from Claude Code's JSON payload
+cwd=$(printf '%s' "$input" | jq -r '.cwd // .workspace.current_dir // empty' 2>/dev/null)
+[[ -z "$cwd" ]] && exit 0
+
+# Skip if not a git repo
+git -C "$cwd" rev-parse --git-dir &>/dev/null || exit 0
+
+# Branch
+branch=$(git -C "$cwd" symbolic-ref --short HEAD 2>/dev/null \
+      || git -C "$cwd" describe --tags --exact-match 2>/dev/null \
+      || echo "detached")
+
+# Folder
+folder=$(basename "$cwd")
+
+# Dirty state (staged + unstaged + untracked)
+dirty=$(( \
+  $(git -C "$cwd" diff --name-only 2>/dev/null | wc -l | tr -d ' ') + \
+  $(git -C "$cwd" diff --cached --name-only 2>/dev/null | wc -l | tr -d ' ') + \
+  $(git -C "$cwd" ls-files --others --exclude-standard 2>/dev/null | wc -l | tr -d ' ') \
+))
+
+# Ahead / behind (only if upstream exists)
+ahead=0; behind=0
+if git -C "$cwd" rev-parse @{upstream} &>/dev/null; then
+  read -r ahead behind < <(git -C "$cwd" rev-list --count --left-right HEAD...@{upstream} 2>/dev/null | tr '\t' ' ')
+fi
+
+# Gruvbox colors
+RESET=$'\033[0m'
+AQUA=$'\033[38;2;131;165;152m'   # branch
+GRAY=$'\033[38;2;168;153;132m'   # folder
+GREEN=$'\033[38;2;184;187;38m'   # clean
+RED=$'\033[38;2;251;73;52m'      # dirty / ahead
+YELLOW=$'\033[38;2;250;189;47m'  # behind
+
+# State indicator
+if [[ $dirty -gt 0 ]]; then
+  state="${RED}● ${dirty} changed${RESET}"
+else
+  state="${GREEN}✓ clean${RESET}"
+fi
+
+# Ahead / behind
+sync=""
+[[ $ahead -gt 0 ]] && sync+=" ${RED}↑${ahead}${RESET}"
+[[ $behind -gt 0 ]] && sync+=" ${YELLOW}↓${behind}${RESET}"
+[[ $ahead -eq 0 && $behind -eq 0 ]] && sync=" ${GRAY}≡ up to date${RESET}"
+
+printf "${AQUA} ${branch}${RESET}  ${GRAY}${folder}${RESET}  ${state}${sync}\n"
