@@ -43,7 +43,6 @@
       }
     }
   },
-  "theme": "dark-ansi",
-  "model": "sonnet[1m]",
-  "tui": "fullscreen"
+  "tui": "fullscreen",
+  "theme": "dark-ansi"
 }
