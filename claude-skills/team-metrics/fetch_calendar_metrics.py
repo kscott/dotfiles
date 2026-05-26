@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Fetch Google Calendar metrics for team members and merge into metrics_data.json."""
+"""Fetch Google Calendar metrics and write to metrics_data.calendar.json.
+
+This script owns its own output file. It does not read or merge other sources.
+Use merge_metrics.js to combine all per-source files into the final metrics_data.json.
+"""
 
 import argparse
 import json
@@ -13,7 +17,7 @@ def parse_args():
     p.add_argument('--members', required=True, help='Comma-separated names or ALL')
     p.add_argument('--start', required=True, help='YYYY-MM-DD')
     p.add_argument('--end', required=True, help='YYYY-MM-DD')
-    p.add_argument('--out', required=True, help='Path to metrics_data.json')
+    p.add_argument('--out', required=True, help='Path to metrics_data.calendar.json')
     return p.parse_args()
 
 def is_clockwise(summary):
@@ -26,7 +30,49 @@ def is_clockwise(summary):
 
 def is_ooo(summary):
     s = (summary or '').lower()
-    return any(kw in s for kw in ['out of office', 'ooo', 'vacation', 'pto', 'holiday'])
+    return any(kw in s for kw in [
+        'out of office', 'ooo', 'vacation', 'pto', 'holiday',
+        'time off',     # Workday-pushed personal time-off events
+        'sick day', 'sick leave',
+    ])
+
+
+# Hours of overlap between a timed OOO event and a workday before we count
+# that day as a full OOO day. Below this, the event is treated as an
+# appointment block — skipped from meetings but doesn't burn an OOO day.
+OOO_DAY_THRESHOLD_HOURS = 4.0
+
+
+def timed_ooo_days_covered(event, start_date, end_date):
+    """For a timed OOO event, return the set of weekdays (within [start, end])
+    where the event covers at least OOO_DAY_THRESHOLD_HOURS of the calendar
+    day. Day boundaries are taken in the event's own timezone."""
+    start_info = event.get('start', {})
+    end_info = event.get('end', {})
+    if 'dateTime' not in start_info or 'dateTime' not in end_info:
+        return set()
+    try:
+        s = datetime.fromisoformat(start_info['dateTime'])
+        e = datetime.fromisoformat(end_info['dateTime'])
+    except Exception:
+        return set()
+
+    days = set()
+    # Walk each day in the event's local time and compute overlap.
+    d = s.replace(hour=0, minute=0, second=0, microsecond=0)
+    while d < e:
+        next_day = d + timedelta(days=1)
+        # Overlap of [s, e] with [d, next_day) in this day's local timezone
+        overlap_start = max(s, d)
+        overlap_end = min(e, next_day)
+        overlap_hrs = max((overlap_end - overlap_start).total_seconds() / 3600, 0)
+        day_date = d.date()
+        if (overlap_hrs >= OOO_DAY_THRESHOLD_HOURS
+                and is_weekday(datetime.combine(day_date, datetime.min.time()))
+                and start_date <= day_date <= end_date):
+            days.add(day_date)
+        d = next_day
+    return days
 
 def is_focus_block(summary):
     s = (summary or '').lower()
@@ -159,6 +205,14 @@ def fetch_member_calendar(calendar_id, start_date, end_date, member_name, squad_
         except Exception:
             continue
 
+        # Timed OOO events (e.g. Workday-pushed "Time Off", multi-hour OOO blocks):
+        # mark covered weekdays as OOO if they meet the duration threshold,
+        # and skip the event from meeting-hour counting either way.
+        if is_ooo(summary) or event.get('eventType') == 'outOfOffice':
+            for d in timed_ooo_days_covered(event, start_date, end_date):
+                ooo_days.add(d)
+            continue
+
         # Skip Clockwise / focus blocks
         if is_clockwise(summary) or is_focus_block(summary):
             continue
@@ -223,14 +277,8 @@ def main():
     print(f"Range   : {args.start} → {args.end}")
     print(f"─────────────────────────────────────────────────────────────\n")
 
-    try:
-        with open(args.out) as f:
-            data = json.load(f)
-    except FileNotFoundError:
-        data = {'week': {'start': args.start, 'end': args.end}, 'members': {}}
-
-    if 'members' not in data:
-        data['members'] = {}
+    # This script owns metrics_data.calendar.json — overwrite fresh each run.
+    data = {'week': {'start': args.start, 'end': args.end}, 'members': {}}
 
     # Build first-name → full-name map for squad calendar OOO parsing
     members_by_first = {n.split()[0].lower(): n for n in all_members}
@@ -248,9 +296,7 @@ def main():
         cal_id = all_members[name].get('calendar_id', all_members[name]['email'])
         result = fetch_member_calendar(cal_id, start, end, name, squad_ooo_days=squad_ooo.get(name))
         if result:
-            if name not in data['members']:
-                data['members'][name] = {}
-            data['members'][name]['calendar'] = result
+            data['members'][name] = {'calendar': result}
 
     with open(args.out, 'w') as f:
         json.dump(data, f, indent=2)

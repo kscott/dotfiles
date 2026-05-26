@@ -219,20 +219,48 @@ Extract from the user's request:
 Load `team_config.json` to resolve names to system identifiers.
 Calculate `working_days` = count of Mon–Fri in [start, end]. **Never count Sat/Sun.**
 
-Initialize `metrics_data.json`:
-
-```json
-{
-  "week": { "start": "YYYY-MM-DD", "end": "YYYY-MM-DD", "working_days": 5 },
-  "members": {}
-}
-```
+> **Pipeline architecture (read this).** Each data source writes its own file:
+> `metrics_data.calendar.json`, `metrics_data.atlassian.json`,
+> `metrics_data.github.json`, `metrics_data.pagerduty.json`,
+> `metrics_data.slack.json`. After all five exist, run `merge_metrics.js` —
+> it validates completeness, writes the merged `metrics_data.json`, and (only
+> on a fully-successful merge) deletes the five source files. Do **not** have
+> Claude write to `metrics_data.json` directly during steps 2–6.
+>
+> Each per-source file shares the same top-level shape:
+> ```json
+> { "week": { "start": "YYYY-MM-DD", "end": "YYYY-MM-DD" },
+>   "members": { "<Name>": { /* only this source's fields */ } } }
+> ```
 
 ---
 
 ### Step 2 — Google Calendar (meetings & OOO)
 
-Use the **`mcp__claude_ai_Google_Calendar__list_events`** MCP tool. Call all members in
+**Preferred:** run the `fetch_calendar_metrics.py` script — writes
+`metrics_data.calendar.json`:
+
+```bash
+uv run \
+  --with "google-workspace @ git+ssh://git@github.com/Ibotta/google-workspace-py.git" \
+  --with requests \
+  python3 $SKILL_DIR/fetch_calendar_metrics.py \
+  --config  <metrics-folder>/team_config.json \
+  --members ALL \
+  --start   <YYYY-MM-DD> \
+  --end     <YYYY-MM-DD> \
+  --out     <metrics-folder>/metrics_data.calendar.json
+```
+
+The `google-workspace` package is an internal Ibotta library hosted at
+`github.com/Ibotta/google-workspace-py`. The first run will clone it via SSH
+(make sure `ssh -T git@github.com` succeeds); subsequent runs hit the uv
+cache and are fast.
+
+**Fallback (Claude-driven):** if the script can't run, Claude uses the
+**`mcp__claude_ai_Google_Calendar__list_events`** MCP tool, applies the rules
+below, and writes the result directly to `metrics_data.calendar.json`. Call
+all members in
 parallel — one call per person, using their `calendar_id` (email) from config.
 
 ```
@@ -272,20 +300,22 @@ meeting_pct     = round(total_meeting_hours / available_hours * 100)
 avg_hrs_per_day = total_meeting_hours / max(working_days - ooo_days, 1)
 ```
 
-Write to `metrics_data.json → members[name].calendar`.
+Write to `metrics_data.calendar.json → members[name].calendar`.
 
-#### GitHub PRs — gh CLI (primary method for Ibotta)
+---
+
+### Step 3 — GitHub PRs — gh CLI (primary method for Ibotta)
 
 The script automatically uses the `gh` CLI when it is installed and authenticated.
 No extra flags needed — just run:
 
 ```bash
-node <metrics-folder>/fetch_github_metrics.js \
+node $SKILL_DIR/fetch_github_metrics.js \
   --config  <metrics-folder>/team_config.json \
   --members "Name One,Name Two" \
   --start   <YYYY-MM-DD> \
   --end     <YYYY-MM-DD> \
-  --out     <metrics-folder>/metrics_data.json
+  --out     <metrics-folder>/metrics_data.github.json
 ```
 
 The script queries `github.com/Ibotta` (or the org in `github_org`) directly:
@@ -294,7 +324,7 @@ The script queries `github.com/Ibotta` (or the org in `github_org`) directly:
 - **Reviews given**: `gh api search/issues` with `reviewed-by:<handle>` filter
 - **Comments received**: sum of `commentsCount` on opened PRs
 
-Source will be recorded as `"gh-cli"` in `metrics_data.json`.
+Source will be recorded as `"gh-cli"` in `metrics_data.github.json`.
 
 **Fallback — Slack canvas** (if gh CLI is not authenticated):
 Read the GitHub metrics canvas from Slack using the `slack_read_canvas` MCP tool
@@ -315,12 +345,12 @@ plugin directly (no MCP needed at runtime — just env vars):
 ```bash
 PLUGIN_SRC="$HOME/.claude/plugins/marketplaces/ibotta/plugins/atlassian-api/src"
 PYTHONPATH="$PLUGIN_SRC" uv run --with requests \
-  python3 <metrics-folder>/fetch_atlassian_metrics.py \
+  python3 $SKILL_DIR/fetch_atlassian_metrics.py \
   --config  <metrics-folder>/team_config.json \
   --members "Name One,Name Two"  \
   --start   2026-03-16 \
   --end     2026-03-20 \
-  --out     <metrics-folder>/metrics_data.json
+  --out     <metrics-folder>/metrics_data.atlassian.json
 ```
 
 Collects per person:
@@ -328,14 +358,13 @@ Collects per person:
 **Jira:**
 - Active tickets (statusCategory != Done): key, summary, status, type, URL
 - Tickets closed this week (updated to Done within the date range)
-- On-call is NOT detected from Jira tickets (team no longer creates on-call tickets)
 
 **Confluence:**
 - Pages created this week (CQL: `creator = accountId AND created >= start`)
 - Pages updated this week, excluding those also created (CQL: `contributor = accountId AND lastModified >= start`)
 - Comment count this week
 
-Writes to `metrics_data.json → members[name].jira` and `members[name].confluence`.
+Writes to `metrics_data.atlassian.json → members[name].jira` and `members[name].confluence`. On-call is **not** part of this step — see Step 6.
 
 > **Credentials**: reads `ATLASSIAN_API_USER` and `ATLASSIAN_API_TOKEN` from environment.
 > These must be set in `~/.zshrc`. Get a token at id.atlassian.com → Security → API tokens.
@@ -346,10 +375,10 @@ Writes to `metrics_data.json → members[name].jira` and `members[name].confluen
 
 > **⚠️ FYI — Slack MCP pagination**: The `slack_search_public` tool returns a maximum
 > of 20 results per call, but supports a `cursor` parameter for pagination. Paginate up
-> to **3 pages** (max 60 results total) per search by passing the `cursor` from each
+> to **5 pages** (max 100 results total) per search by passing the `cursor` from each
 > response into the next call. Stop early if fewer than 20 results are returned (end of
-> results). If 60 results are reached and there are still more, display the count as
-> **"60+"** rather than "60" in all reports.
+> results). If 100 results are reached and there are still more, display the count as
+> **"100+"** rather than "100" in all reports.
 
 Search for messages from the member using their **Slack ID** from `team_config.json`
 (`slack_id` field). **Always use `<@ID>` format — never use `slack_handle` for searches.**
@@ -366,20 +395,65 @@ messages**. But do **not discard** weekend messages — if any exist, note them 
 `"weekend_activity"` on the member's data (date + channel). Weekend Slack activity is a
 health flag, not a metric to sum.
 
-**Pagination**: for each search, paginate up to 3 pages (passing `cursor` from each response) to collect up to 60 results. Stop early if a page returns fewer than 20 results. If all 3 pages are full (60 results) and a cursor still exists, record and display the count as `"60+"` to signal it is capped.
+**Pagination**: for each search, paginate up to 5 pages (passing `cursor` from each response) to collect up to 100 results. Stop early if a page returns fewer than 20 results. If all 5 pages are full (100 results) and a cursor still exists, record and display the count as `"100+"` to signal it is capped.
 
 Then run per-channel searches to get per-channel counts. Channels are discovered organically from search results — wherever the person posted, it appears.
 
 Collect:
-- `total_messages` — integer total (sum per-channel counts; treat "60+" as 60)
+- `total_messages` — integer total (sum per-channel counts; treat "100+" as 100)
 - `per_channel` — list of `{ channel, count, summary? }` for channels with activity
 - `active_window` — earliest and latest message timestamp as a time range
 
 **Channel summaries:** After collecting counts, check `slack_summary_channels` in `team_config.json`. For each of those channels where the person had activity, re-read the messages and write a `summary`: 1–2 sentences describing what they were actually doing there — topics raised, questions answered, work referenced. Skip if count is 0. Channels not in `slack_summary_channels` get count only (no `summary` field).
 
-Write to `metrics_data.json → members[name].slack`.
+After gathering, Claude writes a small JSON file (e.g. `/tmp/slack_input.json`)
+with the per-member data and pipes it to `write_slack_source.py`, which
+validates the shape and writes `metrics_data.slack.json` atomically:
 
-**Note on "60+" cap**: Each Slack search paginates up to 3 pages (max 60 results). If all 3 pages fill and a cursor remains, display the count as "60+". Sum all channel counts for the displayed total.
+```bash
+python3 $SKILL_DIR/write_slack_source.py \
+  --config <metrics-folder>/team_config.json \
+  --start  <YYYY-MM-DD> \
+  --end    <YYYY-MM-DD> \
+  --data   /tmp/slack_input.json \
+  --out    <metrics-folder>/metrics_data.slack.json
+```
+
+The script:
+- Refuses any `--out` path that doesn't end in `.slack.json` (so it can never
+  clobber another per-source file, even with a typo).
+- Validates that every member name exists in `team_config.json`.
+- Validates each member's slack dict has `total_messages` (int or `"<N>+"`),
+  `per_channel` (list of `{channel, count, summary?}`), and `active_window`.
+- Writes atomically via tmp-file + rename.
+
+Input shape for `/tmp/slack_input.json` (either `{ "<Name>": {...} }` directly
+or wrapped as `{ "members": { ... } }`):
+
+```json
+{
+  "Shelbey Summers": {
+    "slack": {
+      "total_messages": "60+",
+      "per_channel": [
+        { "channel": "#content_squad", "count": 4,
+          "summary": "1-2 sentences about what they were doing here" },
+        { "channel": "#gamers", "count": 2 }
+      ],
+      "active_window": "Mon 9:56am – Fri 3:04pm"
+    },
+    "partial_absences": [
+      { "date": "May 22", "note": "slept poorly, going to try and rest" }
+    ]
+  }
+}
+```
+
+This step is Claude-driven because the channel summaries and partial-absence
+detection need LLM judgment — but the file-writing is delegated to the guarded
+script so a Claude misstep can't damage other source files.
+
+**Note on "100+" cap**: Each Slack search paginates up to 5 pages (max 100 results). If all 5 pages fill and a cursor remains, display the count as "100+". Sum all channel counts for the displayed total.
 
 #### Partial absence detection
 
@@ -409,8 +483,13 @@ For each match, store:
 ]
 ```
 
-Write to `metrics_data.json → members[name].partial_absences` when writing Slack data.
-The count across the team appears as a summary card; individual entries appear as a collapsible section on each member card (amber, open by default if non-empty).
+Write to `metrics_data.slack.json → members[name].partial_absences` alongside the
+slack data for that member. The count across the team appears as a summary card
+in the report; individual entries appear as a collapsible section on each member
+card (amber, open by default if non-empty).
+
+Similarly, weekend Slack activity is written to `members[name].weekend_activity`
+in `metrics_data.slack.json` (see the Weekend rule near the top of this skill).
 
 ---
 
@@ -418,41 +497,57 @@ The count across the team appears as a summary card; individual entries appear a
 
 On-call is sourced from PagerDuty, **not Jira**. Only the **primary** (L1) on-call person is tracked.
 
-Content Squad schedule IDs:
-- Primary: `PUL2FDL` (Content Squad Primary)
-- Secondary: `PTY2TZH` (Content Squad Secondary — not tracked)
+The schedule ID lives in `team_config.json` as `pagerduty_primary_schedule_id`
+(defaults to `PUL2FDL`, the Content Squad Primary schedule). The secondary
+schedule (`PTY2TZH` for Content) is not tracked.
 
-**Rotation rule:** Rotations happen at **9am Monday**. Always use `T09:00:00` as the `since` time so the pre-rotation window (midnight–9am) is excluded and doesn't pull in the previous week's on-call person.
+**Rotation rule:** Rotations happen at **9am Monday**. The script always uses `T09:00:00` as the `since` time so the pre-rotation window (midnight–9am) is excluded and doesn't pull in the previous week's on-call person.
 
 ```bash
-source ~/.zshrc
-PYTHONPATH="/Users/ken.scott/.claude/plugins/marketplaces/ibotta/plugins/pagerduty-api/src" \
-/opt/homebrew/bin/uv run --with requests python3 -c "
-from pagerduty import SchedulesClient, PagerDutyConfig
-config = PagerDutyConfig.from_env()
-schedules = SchedulesClient(config)
-oncalls = schedules.list_on_calls(
-    schedule_ids=['PUL2FDL'],
-    since='<start>T09:00:00',
-    until='<end>T23:59:59'
-)
-for oc in oncalls.get('oncalls', []):
-    print(oc['user']['summary'])
-"
+PLUGIN_SRC="$HOME/.claude/plugins/marketplaces/ibotta/plugins/pagerduty-api/src"
+PYTHONPATH="$PLUGIN_SRC" uv run --with requests \
+  python3 $SKILL_DIR/fetch_pagerduty_metrics.py \
+  --config  <metrics-folder>/team_config.json \
+  --start   <YYYY-MM-DD> \
+  --end     <YYYY-MM-DD> \
+  --out     <metrics-folder>/metrics_data.pagerduty.json
 ```
 
-Set `on_call: { is_on_call: true, source: 'pagerduty', role: 'primary' }` for the primary on-call person. All others get `is_on_call: false`.
+For each configured member the script writes `on_call: { is_on_call, source: "pagerduty", role: "primary"|null }` into `metrics_data.pagerduty.json`. If two people appear (e.g. handoff mid-week because the primary went OOO), both get `is_on_call: true`.
 
-OOO source priority:
-1. **Individual calendar** (primary) — checked first via `calendar_id` in config
-2. **Squad calendar** (`squad_calendar_id`) — fallback; catches members who haven't updated personal calendars yet (e.g., Nate uses Slack status instead of personal calendar)
-
-The script checks both and merges, so OOO on either calendar is counted.
+> **OOO note (calendar concern, not PD):** OOO is detected in Step 2 from the
+> individual calendar first, then the squad calendar (`squad_calendar_id`) as a
+> fallback for members who use Slack status instead of personal calendars. Both
+> are merged by the calendar fetch.
 
 ---
 
+### Step 7 — Merge sources
 
-### Step 7 — Generate reports
+Once all five per-source files exist (`metrics_data.calendar.json`,
+`metrics_data.atlassian.json`, `metrics_data.github.json`,
+`metrics_data.pagerduty.json`, `metrics_data.slack.json`), run:
+
+```bash
+node $SKILL_DIR/merge_metrics.js \
+  --config  <metrics-folder>/team_config.json \
+  --target  <metrics-folder>/metrics_data.json
+```
+
+The merge script validates:
+- All five source files exist
+- They share the same `week.start` and `week.end`
+- Every configured member appears in every source
+
+**On a fully-successful merge:** writes `metrics_data.json` and **deletes the five source files** so the next run starts clean.
+
+**On any failure:** writes a partial `metrics_data.json` with whatever could be merged, prints what's missing, and **leaves the source files in place** for inspection or re-run. Re-run the failing fetcher, then `merge_metrics.js` again.
+
+Pass `--no-cleanup` to skip the source-file deletion even on success (useful when debugging).
+
+---
+
+### Step 8 — Generate reports
 
 Read `output_formats` from `team_config.json` (defaults to `["html"]` if absent). Run the corresponding script for each format listed.
 
@@ -491,7 +586,7 @@ node $SKILL_DIR/generate_report.js \
 
 ---
 
-### Step 9 — Sync to Google Drive
+### Step 9 — Sync to Google Drive (optional)
 
 Upload both files to Google Drive using the `google-workspace:drive` skill:
 
@@ -536,7 +631,11 @@ After generating:
 
 ---
 
-## Data schema (`metrics_data.json`)
+## Data schema
+
+The final `metrics_data.json` (after `merge_metrics.js`) has this shape. Each
+per-source file shares the top-level shape but only contains its own fields per
+member (e.g. `metrics_data.calendar.json` has only `members[name].calendar`).
 
 ```json
 {

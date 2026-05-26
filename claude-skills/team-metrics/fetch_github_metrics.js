@@ -26,13 +26,17 @@
  *
  * ── USAGE ────────────────────────────────────────────────────────────────────
  *
+ * This script owns its own output file (metrics_data.github.json). It does NOT
+ * read or merge other sources. Use merge_metrics.js to combine all per-source
+ * files into the final metrics_data.json.
+ *
  *   # Auto mode (gh CLI first, then canvas, then API)
  *   node fetch_github_metrics.js \
  *     --config  /path/to/team_config.json \
  *     --members "Name One,Name Two"  (or "ALL") \
  *     --start   2026-03-09 \
  *     --end     2026-03-13 \
- *     --out     /path/to/metrics_data.json
+ *     --out     /path/to/metrics_data.github.json
  *
  *   # Force canvas mode (skip gh CLI check)
  *   node fetch_github_metrics.js ... --canvas-content /tmp/canvas.md
@@ -115,16 +119,26 @@ function sleepSync(ms) {
   execSync(`sleep ${ms / 1000}`);
 }
 
-function ghExecJson(cmdArgs) {
+// When a GitHub user isn't indexed in the org's search (e.g. a brand-new
+// hire whose account hasn't propagated yet), `gh search prs --author=<x>`
+// errors with "users cannot be searched". `gh api search/commits` does NOT
+// fail in the same way — it silently ignores the `author:` clause and
+// returns the org-wide count, which would falsely attribute thousands of
+// commits to the new hire. Callers pass a `ctx` object so the helpers can
+// signal this state and the caller can zero out all metrics for that user.
+
+function ghExecJson(cmdArgs, ctx) {
   try {
     const out = execSync(`gh ${cmdArgs}`, { encoding: 'utf8', timeout: 30000 });
     return JSON.parse(out);
   } catch (e) {
+    const combined = (e.stdout || '') + (e.stderr || '') + (e.message || '');
+    if (ctx && combined.includes('cannot be searched')) ctx.unsearchable = true;
     return null;
   }
 }
 
-function ghExecLines(cmdArgs) {
+function ghExecLines(cmdArgs, ctx) {
   // Returns array of parsed JSON lines (for --jq that emits one object per line)
   try {
     const out = execSync(`gh ${cmdArgs}`, { encoding: 'utf8', timeout: 30000 });
@@ -132,6 +146,8 @@ function ghExecLines(cmdArgs) {
       try { return JSON.parse(line); } catch { return null; }
     }).filter(Boolean);
   } catch (e) {
+    const combined = (e.stdout || '') + (e.stderr || '') + (e.message || '');
+    if (ctx && combined.includes('cannot be searched')) ctx.unsearchable = true;
     return [];
   }
 }
@@ -139,6 +155,7 @@ function ghExecLines(cmdArgs) {
 function fetchMemberGhCli(displayName) {
   const handle = config.members[displayName].github;
   const dateRange = `${startDate}..${endDate}`;
+  const ctx = {};   // shared context: helpers will set ctx.unsearchable on a "cannot be searched" error
 
   console.log(`\n  → ${displayName} (@${handle})`);
 
@@ -146,14 +163,30 @@ function fetchMemberGhCli(displayName) {
   const openedRaw = ghExecJson(
     `search prs --author=${handle} --owner=${githubOrg} ` +
     `--created "${dateRange}" ` +
-    `--json number,title,state,url,repository,createdAt,commentsCount -L 50`
+    `--json number,title,state,url,repository,createdAt,commentsCount -L 50`,
+    ctx
   ) || [];
+
+  // Early-exit: if the very first query said "user can't be searched", skip
+  // the rest. `gh api search/commits` would otherwise quietly drop the author
+  // filter and attribute the org-wide commit count to this member.
+  if (ctx.unsearchable) {
+    console.log(`     ⚠️  GitHub user @${handle} is not searchable in ${githubOrg} (likely a new account).`);
+    console.log(`     Returning zero metrics for this member.`);
+    return {
+      opened: [], updated: [], reviews_given: [],
+      commits_pushed: 0, prs_merged: 0, comments_received: 0,
+      source: 'gh-cli',
+      _note: `GitHub handle "${handle}" not searchable in org "${githubOrg}" — account may not be fully provisioned yet`,
+    };
+  }
 
   // PRs merged this week by this author (may include PRs created before this week)
   const mergedRaw = ghExecJson(
     `search prs --author=${handle} --owner=${githubOrg} ` +
     `--merged --merged-at "${dateRange}" ` +
-    `--json number,title,url,repository -L 50`
+    `--json number,title,url,repository -L 50`,
+    ctx
   ) || [];
 
   const mergedNums = new Set(mergedRaw.map(p => String(p.number)));
@@ -177,7 +210,8 @@ function fetchMemberGhCli(displayName) {
     `api -X GET "search/issues" ` +
     `-f q="type:pr author:${handle} org:${githubOrg} ` +
     `updated:${dateRange} created:<${startDate}" ` +
-    `--jq '.items[] | {number,title,state,html_url,repository_url,updated_at}'`
+    `--jq '.items[] | {number,title,state,html_url,repository_url,updated_at}'`,
+    ctx
   );
 
   const updated = updatedRaw.map(pr => ({
@@ -196,7 +230,8 @@ function fetchMemberGhCli(displayName) {
     `api -X GET "search/issues" ` +
     `-f q="type:pr reviewed-by:${handle} org:${githubOrg} ` +
     `updated:${dateRange} -author:${handle}" ` +
-    `--jq '.items[] | {number,title,state,html_url,repository_url}'`
+    `--jq '.items[] | {number,title,state,html_url,repository_url}'`,
+    ctx
   );
 
   const reviews_given = reviewsRaw.map(pr => ({
@@ -209,11 +244,15 @@ function fetchMemberGhCli(displayName) {
 
   sleepSync(2000);
 
-  // Commits pushed this week (via GitHub commit search API)
+  // Commits pushed this week (via GitHub commit search API).
+  // Note: `search/commits` does NOT error on an unsearchable author — it
+  // silently ignores the clause. The `ctx.unsearchable` early-return above
+  // is the guard against that. By this line we know the author IS searchable.
   const commitsResult = ghExecJson(
     `api -X GET "search/commits" ` +
     `-H "Accept: application/vnd.github.cloak-preview+json" ` +
-    `-f q="author:${handle} org:${githubOrg} committer-date:${startDate}..${endDate}"`
+    `-f q="author:${handle} org:${githubOrg} committer-date:${startDate}..${endDate}"`,
+    ctx
   );
   const commits_pushed = commitsResult?.total_count || 0;
 
@@ -511,24 +550,17 @@ async function main() {
     console.warn('   This is the recommended way to get accurate PR data for Ibotta.\n');
   }
 
-  // Load existing metrics_data.json
-  let metricsData = { members: {} };
-  if (fs.existsSync(outPath)) {
-    try {
-      metricsData = JSON.parse(fs.readFileSync(outPath, 'utf8'));
-      console.log(`\nLoaded existing metrics_data.json (will merge prs section only).`);
-    } catch (e) {
-      console.warn(`\nWarning: could not parse ${outPath}, starting with empty data.`);
-    }
-  }
-  if (!metricsData.members) metricsData.members = {};
+  // This script owns metrics_data.github.json — overwrite fresh each run.
+  const metricsData = {
+    week: { start: startDate, end: endDate },
+    members: {},
+  };
 
   // ── GH CLI MODE (primary) ─────────────────────────────────────────────────
   if (useGhCli) {
     for (let i = 0; i < members.length; i++) {
       const name = members[i];
-      if (!metricsData.members[name]) metricsData.members[name] = {};
-      metricsData.members[name].prs = fetchMemberGhCli(name);
+      metricsData.members[name] = { prs: fetchMemberGhCli(name) };
       if (i < members.length - 1) sleepSync(3000);
     }
 
@@ -552,15 +584,13 @@ async function main() {
       console.log(`\n  → ${name} (@${config.members[name].github})`);
       if (canvasResults[name]) {
         found++;
-        if (!metricsData.members[name]) metricsData.members[name] = {};
-        metricsData.members[name].prs = canvasResults[name];
+        metricsData.members[name] = { prs: canvasResults[name] };
       } else {
         console.warn(`    ⚠️  Not found in canvas — skipping PR data for ${name}`);
-        if (!metricsData.members[name]) metricsData.members[name] = {};
-        metricsData.members[name].prs = {
+        metricsData.members[name] = { prs: {
           opened: [], reviews_given: [], comments_received: 0,
           source: 'slack-canvas', _note: 'Member not found in canvas this week',
-        };
+        }};
       }
     }
 
@@ -583,12 +613,10 @@ async function main() {
     console.warn('   Run `gh auth login` for accurate Ibotta data.\n');
 
     for (const name of members) {
-      if (!metricsData.members[name]) metricsData.members[name] = {};
-      metricsData.members[name].prs = await fetchMemberGithubApi(name, token);
+      metricsData.members[name] = { prs: await fetchMemberGithubApi(name, token) };
     }
   }
 
-  // Write back
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, JSON.stringify(metricsData, null, 2), 'utf8');
   console.log(`\n━━ Done ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);

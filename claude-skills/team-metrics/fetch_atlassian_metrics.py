@@ -2,21 +2,24 @@
 """
 fetch_atlassian_metrics.py
 
-Fetches Jira and Confluence data for all team members and writes the
-"jira" and "confluence" sections of metrics_data.json.
+Fetches Jira + Confluence data and writes metrics_data.atlassian.json.
+
+This script owns its own output file — does NOT read or merge other sources.
+On-call data lives in fetch_pagerduty_metrics.py.
+Use merge_metrics.js to combine all per-source files into metrics_data.json.
 
 Requires:
   - ATLASSIAN_API_USER env var (your Ibotta email)
   - ATLASSIAN_API_TOKEN env var (Atlassian API token from id.atlassian.com)
   - atlassian-api@ibotta plugin installed (provides the atlassian client library)
 
-Run with uv (the recommended way):
+Run with uv:
   PYTHONPATH="<plugin-src>" uv run --with requests python3 fetch_atlassian_metrics.py \\
     --config  team_config.json \\
     --members "Name One,Name Two"  (or "ALL") \\
     --start   2026-03-16 \\
     --end     2026-03-20 \\
-    --out     metrics_data.json
+    --out     metrics_data.atlassian.json
 
 The plugin src path is:
   ~/.claude/plugins/marketplaces/ibotta/plugins/atlassian-api/src
@@ -39,7 +42,7 @@ parser.add_argument("--config",  required=True, help="Path to team_config.json")
 parser.add_argument("--members", required=True, help='"Name One,Name Two" or "ALL"')
 parser.add_argument("--start",   required=True, help="Start date YYYY-MM-DD")
 parser.add_argument("--end",     required=True, help="End date YYYY-MM-DD")
-parser.add_argument("--out",     required=True, help="Path to metrics_data.json")
+parser.add_argument("--out",     required=True, help="Path to metrics_data.atlassian.json")
 args = parser.parse_args()
 
 # ── Load config ───────────────────────────────────────────────────────────────
@@ -135,38 +138,11 @@ def conf_page(item):
     }
 
 
-# ── Load existing metrics_data.json ───────────────────────────────────────────
-metrics = {"members": {}}
-if os.path.exists(args.out):
-    try:
-        with open(args.out) as f:
-            metrics = json.load(f)
-    except Exception as e:
-        print(f"  ⚠️  Could not parse {args.out}, starting fresh: {e}", file=sys.stderr)
-
-if "members" not in metrics:
-    metrics["members"] = {}
-
-# ── On-call: fetch from PagerDuty (primary schedule only) ─────────────────────
-PAGERDUTY_SCHEDULE_ID = "PUL2FDL"
-oncall_names = set()
-try:
-    import sys as _sys
-    _pd_src = os.path.expanduser("~/.claude/plugins/cache/ibotta/pagerduty-api/1.0.0/src")
-    if _pd_src not in _sys.path:
-        _sys.path.insert(0, _pd_src)
-    from pagerduty import SchedulesClient, PagerDutyConfig
-    _pd_config = PagerDutyConfig.from_env()
-    _pd_schedules = SchedulesClient(_pd_config)
-    _oncalls = _pd_schedules.list_on_calls(
-        schedule_ids=[PAGERDUTY_SCHEDULE_ID],
-        since=f"{WEEK_START}T09:00:00",
-        until=f"{WEEK_END}T23:59:59",
-    )
-    oncall_names = {oc["user"]["summary"] for oc in _oncalls.get("oncalls", [])}
-    print(f"PagerDuty on-call : {', '.join(sorted(oncall_names)) or 'none found'}")
-except Exception as _e:
-    print(f"  ⚠️  PagerDuty lookup failed: {_e}", file=sys.stderr)
+# This script owns metrics_data.atlassian.json — overwrite fresh each run.
+metrics = {
+    "week": {"start": WEEK_START, "end": WEEK_END},
+    "members": {},
+}
 
 # ── Fetch per member ──────────────────────────────────────────────────────────
 for name in members:
@@ -178,15 +154,15 @@ for name in members:
     account_id = get_jira_account_id(email)
     if not account_id:
         print(f"    ⚠️  Jira account not found for {email} — skipping Jira/Confluence")
-        if name not in metrics["members"]:
-            metrics["members"][name] = {}
-        metrics["members"][name]["jira"] = {
-            "assigned_total": 0, "closed_this_week": 0,
-            "active": [], "closed_tickets": [],
-            "_note": f"Jira account not found for {email}",
-        }
-        metrics["members"][name]["confluence"] = {
-            "created": 0, "updated": 0, "commented": 0, "pages": [],
+        metrics["members"][name] = {
+            "jira": {
+                "assigned_total": 0, "closed_this_week": 0,
+                "active": [], "closed_tickets": [],
+                "_note": f"Jira account not found for {email}",
+            },
+            "confluence": {
+                "created": 0, "updated": 0, "commented": 0, "pages": [],
+            },
         }
         continue
 
@@ -213,13 +189,9 @@ for name in members:
         print(f"    ⚠️  Jira closed tickets error: {e}", file=sys.stderr)
         closed = []
 
-    is_on_call = name in oncall_names
-
     closed_pts = sum(t["points"] for t in closed if t["points"] is not None)
     print(f"    Jira active : {len(active)}")
     print(f"    Jira closed : {len(closed)} (this week) — {closed_pts} pts")
-    if is_on_call:
-        print(f"    On-call     : ✅ (PagerDuty primary)")
 
     # ── CONFLUENCE ───────────────────────────────────────────────────────────
     # Pages created this week
@@ -267,32 +239,21 @@ for name in members:
     print(f"    Confluence pages updated : {len(updated_pages)}")
 
     # ── Write into metrics ────────────────────────────────────────────────────
-    if name not in metrics["members"]:
-        metrics["members"][name] = {}
-
-    metrics["members"][name]["jira"] = {
-        "assigned_total":    len(active),
-        "closed_this_week":  len(closed),
-        "points_this_week":  closed_pts,
-        "active":            active,
-        "closed_tickets":    closed,
+    metrics["members"][name] = {
+        "jira": {
+            "assigned_total":    len(active),
+            "closed_this_week":  len(closed),
+            "points_this_week":  closed_pts,
+            "active":            active,
+            "closed_tickets":    closed,
+        },
+        "confluence": {
+            "created":   len(created_pages),
+            "updated":   len(updated_pages),
+            "commented": comment_count,
+            "pages":     all_conf_pages,
+        },
     }
-
-    metrics["members"][name]["confluence"] = {
-        "created":   len(created_pages),
-        "updated":   len(updated_pages),
-        "commented": comment_count,
-        "pages":     all_conf_pages,
-    }
-
-    # On-call detection
-    if "on_call" not in metrics["members"][name]:
-        metrics["members"][name]["on_call"] = {}
-    metrics["members"][name]["on_call"].update({
-        "is_on_call": is_on_call,
-        "source":     "pagerduty" if is_on_call else "pagerduty",
-        "role":       "primary" if is_on_call else None,
-    })
 
 # ── Write back ────────────────────────────────────────────────────────────────
 with open(args.out, "w") as f:
