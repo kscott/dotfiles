@@ -60,19 +60,14 @@ Do not proceed until confirmed.
 
 ### 4. Verify dependencies (silent if all present)
 
-- `which whisper-cli ffmpeg` — if either missing: `brew install whisper-cpp ffmpeg`
-- Model at `~/.cache/whisper-cpp/models/ggml-large-v3-turbo.bin` — if missing:
-  ```bash
-  mkdir -p ~/.cache/whisper-cpp/models
-  curl -L -o ~/.cache/whisper-cpp/models/ggml-large-v3-turbo.bin \
-       https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin
-  ```
+- `which ffmpeg` — if missing: `brew install ffmpeg`
 - FluidAudio CLI at `~/dev/FluidAudio/.build/arm64-apple-macosx/release/fluidaudiocli` — if missing:
   ```bash
   gh repo clone FluidInference/FluidAudio ~/dev/FluidAudio
   cd ~/dev/FluidAudio && swift build -c release --product fluidaudiocli
   ```
 - Merge script at `~/.claude/skills/transcribe/merge_transcript.py` — no extra dependencies (stdlib only)
+- Optional: `~/ai/transcribe-glossary.txt` — custom vocab file for proper noun correction (see step 6)
 
 ### 5. Convert audio to whisper's expected format
 
@@ -82,20 +77,27 @@ ffmpeg -y -i <input-audio> -ar 16000 -ac 1 -c:a pcm_s16le /tmp/meeting.wav
 
 Works transparently for `.m4a`, `.mp4`, `.mp3`, `.wav`.
 
-### 6. Run whisper-cli (Metal-accelerated)
+### 6. Transcribe with FluidAudio (ANE-accelerated)
 
 ```bash
-whisper-cli \
-  -m ~/.cache/whisper-cpp/models/ggml-large-v3-turbo.bin \
-  -f /tmp/meeting.wav \
-  -l en \
-  -oj \
-  -of /tmp/meeting_whisper
+~/dev/FluidAudio/.build/arm64-apple-macosx/release/fluidaudiocli transcribe \
+  /tmp/meeting.wav \
+  --model-version v3 \
+  --output-json /tmp/meeting_whisper.json
 ```
 
-Outputs `/tmp/meeting_whisper.json` with per-segment timestamps. On Apple Silicon with Metal: ~13x real-time (30 sec audio in ~2-3 sec). Run in background for long files.
+Add `--custom-vocab ~/ai/transcribe-glossary.txt` if the glossary file exists — it corrects proper nouns (team names, project names, technical terms) via CTC rescoring. See **Custom Vocabulary** section below.
 
-**Do NOT use whisperx for transcription** — its backend (ctranslate2) does not support MPS and runs at ~1x real-time on CPU. whisper-cpp on Metal is ~13x faster.
+**Model options** (benchmarked on M4 Mac Mini, 57-min recording):
+
+| Model | Speed | Quality | Use when |
+|---|---|---|---|
+| `v3` (default, 0.6B) | 356x real-time | Best | Always — best accuracy |
+| `110m` (110M) | 578x real-time | Good | Speed-critical, shorter recordings |
+
+**Do NOT use whisper-cpp for transcription** — 13x real-time vs 356x. FluidAudio Parakeet v3 is 27x faster with comparable quality on English speech.
+
+The output JSON has the same segment structure as whisper-cpp — `merge_transcript.py` reads both formats.
 
 ### 7. Parse Zoom VTT or run FluidAudio diarization
 
@@ -157,10 +159,31 @@ Speaker map format: `"ID=Name,ID=Name"` using the string IDs from the diarizatio
 
 ### 8. Clean output and apply glossary
 
-- Strip leading whitespace from each line of whisper's txt output.
-- Detect trailing hallucinations (whisper sometimes repeats a phrase 20+ times when fed silence) — drop them.
-- **Apply glossary substitutions** from `~/ai/transcribe-glossary.md`. This file is maintained by Claude (you), not the user — read it on every run, apply confident substitutions to the transcript text (both the VTT-attributed paragraphs and any whisper-only prose).
-- **After the transcript is published**, if the user catches a new consistent misrecognition in conversation, propose adding it to the glossary. Update `~/ai/transcribe-glossary.md` with the new entry under the appropriate section (confident vs. review-only).
+- Detect trailing hallucinations (repeated phrases at end of audio) — drop them.
+- **Apply post-processing substitutions** from `~/ai/transcribe-glossary.txt` to the final transcript text. This applies to ALL transcripts regardless of source — FluidAudio, Zoom VTT, or anything else. Read the file, apply each term substitution (and aliases → canonical form) to the transcript markdown before writing the output file.
+- After the transcript is published, if Ken corrects a misrecognized name or term in conversation, propose adding it to `~/ai/transcribe-glossary.txt`. The same file drives both the FluidAudio custom vocab (acoustic correction at transcription time) and this post-processing pass (text correction after the fact).
+
+## Custom Vocabulary
+
+FluidAudio supports CTC-based vocabulary boosting — it corrects proper nouns the ASR misrecognizes without retraining the model. Applied at transcription time via `--custom-vocab`.
+
+**File:** `~/ai/transcribe-glossary.txt`
+
+**Format:** one term per line; optionally `term: alias1, alias2` for phonetic variants
+
+```
+# Format: one term per line
+# Aliases: term: alias1, alias2
+Ibotta
+Titus
+Shelbey: Shelby
+Build Our Way Out: builder layout, builder way out
+TypeScript: typescript, Typescript
+```
+
+**How it works:** uses a separate CTC encoder (97.5 MB, downloaded once) to score each vocab term against the audio, then replaces ASR output only when the acoustic evidence favors the vocab term. Guards against false positives on short/common words.
+
+**When to update:** whenever Ken corrects a proper noun in conversation after a transcript is published. Propose the addition, confirm with Ken, then append to the file.
 
 ### 9. Write the transcript file
 
@@ -174,7 +197,7 @@ Header fields:
 **Date:** <Weekday>, <Month Day, Year>
 **Duration:** ~<N> minutes
 **Source:** <audio-filename>; <vtt-filename if present>
-**Method:** Zoom VTT speaker diarization + whisper-cpp large-v3-turbo (if no VTT: whisper only, unattributed)
+**Method:** FluidAudio Parakeet v3 + FluidAudio speaker diarization (ANE) [if VTT: Zoom VTT speaker diarization]
 **Attendees:** <from calendar; note any room-label corrections>
 
 > Note: Auto-generated. Minor misrecognitions possible on proper names and acronyms.
