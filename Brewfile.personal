@@ -10,6 +10,16 @@ brew "yt-dlp"       # YouTube/video metadata + download (used by tab-capture not
 brew "imagemagick"  # image processing — deskew scanned docs, etc.
 brew "ghostscript"  # PDF rendering (required by imagemagick for PDF input)
 
+# Casks
+cask "balenaetcher"
+cask "calibre"
+cask "discord"
+cask "maestral"
+cask "openaudible"
+cask "oscar"
+cask "vlc"
+cask "xld"
+
 # Swift
 brew "swiftlint"
 brew "swiftformat"

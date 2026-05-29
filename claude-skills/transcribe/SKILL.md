@@ -67,6 +67,12 @@ Do not proceed until confirmed.
   curl -L -o ~/.cache/whisper-cpp/models/ggml-large-v3-turbo.bin \
        https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin
   ```
+- FluidAudio CLI at `~/dev/FluidAudio/.build/arm64-apple-macosx/release/fluidaudiocli` — if missing:
+  ```bash
+  gh repo clone FluidInference/FluidAudio ~/dev/FluidAudio
+  cd ~/dev/FluidAudio && swift build -c release --product fluidaudiocli
+  ```
+- Merge script at `~/.claude/skills/transcribe/merge_transcript.py` — no extra dependencies (stdlib only)
 
 ### 5. Convert audio to whisper's expected format
 
@@ -76,22 +82,24 @@ ffmpeg -y -i <input-audio> -ar 16000 -ac 1 -c:a pcm_s16le /tmp/meeting.wav
 
 Works transparently for `.m4a`, `.mp4`, `.mp3`, `.wav`.
 
-### 6. Run whisper-cli
+### 6. Run whisper-cli (Metal-accelerated)
 
 ```bash
 whisper-cli \
   -m ~/.cache/whisper-cpp/models/ggml-large-v3-turbo.bin \
   -f /tmp/meeting.wav \
   -l en \
-  -otxt \
+  -oj \
   -of /tmp/meeting_whisper
 ```
 
-Run in background; on Apple Silicon expect ~1 min per 30 min of audio with Metal acceleration.
+Outputs `/tmp/meeting_whisper.json` with per-segment timestamps. On Apple Silicon with Metal: ~13x real-time (30 sec audio in ~2-3 sec). Run in background for long files.
 
-### 7. Parse Zoom VTT (if available)
+**Do NOT use whisperx for transcription** — its backend (ctranslate2) does not support MPS and runs at ~1x real-time on CPU. whisper-cpp on Metal is ~13x faster.
 
-If a `*.transcript.vtt` was found:
+### 7. Parse Zoom VTT or run FluidAudio diarization
+
+**If a `*.transcript.vtt` was found:**
 
 ```bash
 # Get unique speakers first to validate against attendee roster
@@ -107,7 +115,45 @@ python3 ~/.claude/skills/transcribe/parse_vtt.py <vtt-path> > /tmp/meeting_attri
 - Stop and ask Ken: "VTT has `<unknown-label>` — who is that? A person, or a conference room?"
 - Don't publish wrong attribution.
 
-If no VTT: use whisper's txt output as a single unattributed prose block. Note in the transcript header that no speaker attribution was available.
+**If no VTT (audio-only recording):** use FluidAudio for diarization, then merge with whisper-cpp JSON.
+
+**Step 1 — Diarize:**
+```bash
+~/dev/FluidAudio/.build/arm64-apple-macosx/release/fluidaudiocli process \
+  /tmp/meeting.wav \
+  --num-clusters <number-of-speakers> \
+  --output /tmp/meeting_diarize.json
+```
+
+Uses Apple Neural Engine — very fast, no external dependencies.
+
+**Step 2 — Identify speakers:**
+
+Show the distribution and ask Ken to map each ID to a name before merging:
+```bash
+python3 -c "
+import json
+from collections import Counter
+d = json.load(open('/tmp/meeting_diarize.json'))
+counts = Counter(str(s['speakerId']) for s in d['segments'])
+for sid, n in sorted(counts.items()):
+    mins = sum(s['endTimeSeconds']-s['startTimeSeconds'] for s in d['segments'] if str(s['speakerId'])==sid)/60
+    print(f'SPEAKER_{sid}: {n} segments, {mins:.1f} min')
+"
+```
+
+IDs with <0.5 min total are usually noise artifacts — fold them into the nearest real speaker. For remaining ambiguous IDs, cross-reference with the whisper transcript by timestamp and ask Ken which is which (or he may have told you upfront — e.g. "female voice is X").
+
+**Step 3 — Merge:**
+```bash
+python3 ~/.claude/skills/transcribe/merge_transcript.py \
+  /tmp/meeting_diarize.json \
+  /tmp/meeting_whisper.json \
+  "<ID>=<Name>,<ID>=<Name>" \
+  > /tmp/transcript_body.md
+```
+
+Speaker map format: `"ID=Name,ID=Name"` using the string IDs from the diarization JSON. Example: `"2=Jasmine,3=Ken"`. IDs are strings in the JSON, not integers.
 
 ### 8. Clean output and apply glossary
 
