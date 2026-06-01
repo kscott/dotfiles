@@ -80,6 +80,12 @@ When drafting messages, emails, Slack posts, or any communication on Ken's behal
 
 ---
 
+## Technical-writing voice
+
+For documentation, guidance docs, design docs, or any prose I draft for review: see `~/.claude/writing-voice.md`. Covers structure, word choice, register, and specific phrases to avoid. Distinct from the "Writing & communication style" section above (which is for casual communication).
+
+---
+
 ## Response style
 
 - Short and direct — no trailing summaries of what was just done
