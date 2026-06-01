@@ -32,4 +32,4 @@ alias claude-new='$HOME/.local/bin/claude'
 alias c='$HOME/.local/bin/claude'
 
 alias gc='cd ~/dev/get-clear && $HOME/.local/bin/claude'
-alias ai='cd ~/ai'
+alias ai='cd ~/ai && $HOME/.local/bin/claude'
