@@ -110,8 +110,33 @@ Both doing and session log are non-negotiable — never do one without the other
 
 ---
 
-### Step 4: Confirm
+### Step 4: Tidy working repos
 
-Report what was logged: doing entries (times + summaries) and session log entry header.
+Ken's personal repos should not end a session with uncommitted work sitting in them. Check each and don't let changes linger.
+
+```bash
+for r in ~/dotfiles ~/ai ~/Notes; do
+  echo "=== $r ==="; git -C "$r" status --short
+done
+```
+
+For any repo that's dirty:
+1. Report the count of changed files (untracked folders expand — use `git -C <repo> status --short --untracked-files=all | wc -l` for the true file count).
+2. Commit in **logical, per-topic groups** (one project/concern per commit — don't sweep everything into one commit), with concise messages. Add only the files for each group explicitly; never blind `git add -A` across unrelated work.
+3. Push: `git pull --rebase origin main` then `git push origin main`. If the rebase is blocked by *unrelated* unstaged changes you're not committing yet, `git stash push <those files>` first and `git stash pop` after.
+4. End with `git status --short` empty for each repo.
+
+End-of-day commit/push trailer (per global rules):
+```
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+```
+
+Don't force-push or rewrite already-pushed history without asking. If something in the working tree looks unexpected (a deletion you didn't make, a file you don't recognize), surface it rather than committing it.
+
+---
+
+### Step 5: Confirm
+
+Report what was logged: doing entries (times + summaries), the session log entry header, and the repo state (which repos were committed/pushed, and that all are now clean).
 
 $ARGUMENTS
