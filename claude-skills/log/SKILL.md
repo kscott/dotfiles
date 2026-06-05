@@ -1,21 +1,21 @@
 ---
-name: wrap
-description: End-of-session wrap-up. Checks calendar and reminders, logs work with doing CLI, and appends to session log. Use when the user says wrap up, log it, done for the day, or similar.
+name: log
+description: Log a chunk of work to the doing CLI and the session log, and tidy any dirty personal repos. Use throughout the day (not just end of day) whenever Ken wants to capture what he just did — says /log, log it, log this, capture this, wrap up, done for now, or similar. Checks the calendar, writes the doing entry with correct time rounding, appends to the session log, and commits/pushes uncommitted changes in dotfiles/ai/Notes.
 disable-model-invocation: true
 ---
 
 ## For Claude: if the Skill tool errors on this skill
 
-`disable-model-invocation: true` means only Ken invokes this skill by typing `/wrap`.
-If you attempted to invoke it via the Skill tool and got an error: **stop, do not read this file and proceed anyway.** Tell Ken the skill errored and ask him to type `/wrap` himself.
+`disable-model-invocation: true` means only Ken invokes this skill by typing `/log`.
+If you attempted to invoke it via the Skill tool and got an error: **stop, do not read this file and proceed anyway.** Tell Ken the skill errored and ask him to type `/log` himself.
 
 ## Current Time
 - Now: !`date "+%Y-%m-%d %H:%M"`
 - Hostname: !`hostname`
 
-## Session Wrap-Up
+## Session Log
 
-You are wrapping up a Claude Code session for Ken Scott. Complete all steps in order.
+You are logging a chunk of work for Ken Scott. This may run several times a day, not just at end of day. Complete all steps in order.
 
 ---
 
@@ -116,6 +116,7 @@ Ken's personal repos should not end a session with uncommitted work sitting in t
 
 ```bash
 for r in ~/dotfiles ~/ai ~/Notes; do
+  git -C "$r" rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "=== $r (not a git repo on this machine — skip) ==="; continue; }
   echo "=== $r ==="; git -C "$r" status --short
 done
 ```

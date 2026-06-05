@@ -36,9 +36,9 @@ Claude MUST NOT use `cat` in the Bash tool solely to read a file. The Read tool 
 
 ---
 
-## Session wrap-up (`/wrap`)
+## Session logging (`/log`)
 
-The `/wrap` skill has `disable-model-invocation: true`. If the Skill tool errors on it: **stop and ask Ken to type `/wrap` himself.** Do not read SKILL.md and proceed. Do not improvise.
+`/log` (formerly `/wrap`) is run throughout the day to capture a chunk of work — not only at end of day. The skill has `disable-model-invocation: true`. If the Skill tool errors on it: **stop and ask Ken to type `/log` himself.** Do not read SKILL.md and proceed. Do not improvise.
 
 Always do both steps — `doing done` CLI entry AND session log update. Never one without the other.
 
