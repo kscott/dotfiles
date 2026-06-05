@@ -47,7 +47,7 @@ Review what was accomplished. Write a concise doing entry (one line, imperative,
 
 1. **Now:** read the current time from the `## Current Time` block above (e.g. 22:58)
 2. **Rounded end:** round to nearest :00, :15, :30, or :45 (e.g. 22:58 → 23:00)
-3. **Start time:** use what the user stated (e.g. "started at 9pm" → 21:00), or derive from conversation context
+3. **Start time:** prefer what the user stated (e.g. "started at 9pm" → 21:00). Otherwise **read `~/.claude/work-clock`** with the Read tool — the `SessionStart` hook stamps session start there, and `/log` advances it at the end of each run, so it marks the start of *this* chunk. Use that time. Only if the file is missing *and* the user said nothing, ask.
 4. **Rounded start:** round start to nearest :00, :15, :30, or :45
 5. **`--back` value:** the rounded start time as a clock time (e.g. `--back 9pm`), NOT a duration
 
@@ -139,5 +139,11 @@ Don't force-push or rewrite already-pushed history without asking. If something 
 ### Step 5: Confirm
 
 Report what was logged: doing entries (times + summaries), the session log entry header, and the repo state (which repos were committed/pushed, and that all are now clean).
+
+---
+
+### Step 6: Reset the work clock
+
+Write the **rounded end time** from Step 2 to `~/.claude/work-clock` so the next `/log` chunk starts where this one ended. (The `SessionStart` hook seeds this file at session start; each `/log` advances it.) Use the **Write tool** — Bash `>` redirects are blocked by the safety hook — with a single line in the hook's format, e.g. `2026-06-05 12:30 MDT`.
 
 $ARGUMENTS

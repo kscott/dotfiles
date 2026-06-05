@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "input=$(cat); skill=$(echo \"$input\" | jq -r '.tool_input.skill // empty'); if [ \"$skill\" = \"wrap\" ]; then echo '{\"continue\": false, \"stopReason\": \"The wrap skill is yours to invoke — type /wrap yourself.\"}'; fi"
+            "command": "input=$(cat); skill=$(echo \"$input\" | jq -r '.tool_input.skill // empty'); if [ \"$skill\" = \"log\" ]; then echo '{\"continue\": false, \"stopReason\": \"The log skill is yours to invoke — type /log yourself.\"}'; fi"
           }
         ]
       },
@@ -16,6 +16,17 @@
           {
             "type": "command",
             "command": "input=$(cat); cmd=$(echo \"$input\" | jq -r '.tool_input.command // empty'); if echo \"$cmd\" | grep -qE '\\bsed\\b'; then echo '{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"sed is banned — it destroyed days of work. Use the Edit tool instead.\"}}'; elif echo \"$cmd\" | perl -ne 'exit 0 if /\\b(echo|printf|cat)\\s[^|;&]*(?<!\\d)>(?!\\/dev\\/null)(?![&>])/; exit 1'; then echo '{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"Direct file writes via Bash are banned. Use the Write or Edit tool instead.\"}}'; elif echo \"$cmd\" | grep -qE 'git (reset --hard|push --force([^-]|$)|push -f|rebase -i)'; then echo '{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"Destructive git command blocked (--force-with-lease is allowed). Run it yourself if you mean it.\"}}'; elif echo \"$cmd\" | grep -qE 'doing\\.md'; then echo '{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"doing.md cannot be touched directly. Use the doing CLI.\"}}'; fi"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "date '+%Y-%m-%d %H:%M %Z' > ~/.claude/work-clock"
           }
         ]
       }
