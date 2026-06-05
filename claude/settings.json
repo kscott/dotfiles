@@ -27,7 +27,8 @@
   },
   "enabledPlugins": {
     "swift-lsp@claude-plugins-official": true,
-    "slack@claude-plugins-official": true
+    "slack@claude-plugins-official": true,
+    "google-workspace@ibotta": true
   },
   "extraKnownMarketplaces": {
     "claude-plugins-official": {

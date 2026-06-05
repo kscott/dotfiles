@@ -29,6 +29,10 @@ brew "html2text"    # HTML to Markdown converter
 # GitHub
 brew "gh"
 
+# Google Workspace (gws CLI — used by the google-workspace plugin & manager-bot)
+brew "googleworkspace-cli"  # `gws`: Docs, Sheets, Drive, Calendar, Slides, Forms
+brew "jq"                   # JSON parsing (gws skills pipe output through jq)
+
 # Apps
 cask "iterm2"
 
