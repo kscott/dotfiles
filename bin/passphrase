@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+# passphrase — generate a memorable, random passphrase.
+#
+# Run with no args to pick a theme from a menu (5 random themes shown at a
+# time; shuffle for 5 more). Words are chosen cryptographically from
+# /dev/urandom, hyphen-joined, with a dash-separated random 2-digit number
+# appended. Generation is fully local — nothing is sent anywhere.
+#
+# Usage:
+#   passphrase            # menu of 5 random themes, then 4 words + number
+#   passphrase 6          # same menu, but 6 words
+#   passphrase weather    # skip the menu, use a named theme
+#   passphrase weather 5  # named theme, 5 words
+#   passphrase random 6   # full-dictionary (max strength), 6 words
+
+set -euo pipefail
+
+dict="/usr/share/dict/words"
+
+rand() { od -An -N4 -tu4 /dev/urandom | tr -d ' '; }
+
+# Curated themed word pools. Themed = memorable but lower-entropy; for a
+# high-stakes secret (e.g. an SSO bridge) choose "random" and use more words.
+theme_words() {
+  case "$1" in
+    weather)   echo "storm cloud thunder frost breeze drizzle gale tempest cyclone monsoon hail sleet mist squall blizzard rainbow sunbeam haze flurry zephyr typhoon overcast chill drought aurora" ;;
+    mountains) echo "granite summit ridge spruce glacier canyon timber falcon boulder valley alpine cliff slope cedar cabin trail saddle gorge basin meadow tundra crag pine" ;;
+    coffee)    echo "roast mocha velvet grind harvest crema barista espresso latte bean brew arabica robusta froth aroma blend mellow toasty nutty cocoa" ;;
+    nautical)  echo "anchor tide beacon harbor lantern compass mariner galley rudder ballast rigging current keel reef lagoon vessel sailor wharf buoy" ;;
+    space)     echo "nebula cosmos quasar comet orbit lunar solar meteor stellar galaxy pulsar photon eclipse cosmic gravity nova rover crater plasma vacuum" ;;
+    garden)    echo "trellis bramble petal compost sprout willow thistle clover orchard meadow fern moss bloom lavender rosemary thyme basil tulip dahlia hedge spade arbor" ;;
+    forest)    echo "cedar birch maple fern moss thicket canopy bracken hollow grove sapling timber willow alder spruce bramble lichen acorn antler badger" ;;
+    desert)    echo "dune mesa cactus canyon arroyo coyote mirage oasis gulch boulder ember adobe juniper quartz vulture saguaro sirocco" ;;
+    ocean)     echo "coral lagoon current tide kelp dolphin marlin reef abyss breaker undertow seafoam barnacle anchor harbor pearl mariner" ;;
+    mythology) echo "phoenix kraken titan oracle griffin valkyrie hydra centaur pegasus chimera olympus trident siren sphinx mortal" ;;
+    autumn)    echo "amber harvest ember maple acorn cider bramble gourd chestnut crisp hazel rustle russet thicket bonfire flannel orchard" ;;
+    winter)    echo "frost glacier flurry icicle tundra spruce hearth mitten lantern blizzard pine cocoa wreath crystal antler aurora" ;;
+    kitchen)   echo "kettle skillet ladle whisk copper saffron thyme basil knead simmer pantry mortar hearth cinnamon brisket flour" ;;
+    music)     echo "cadence treble octave fugue timbre banjo cello fiddle lyric tempo ballad anthem encore vinyl reverb chord harmony" ;;
+    birds)     echo "falcon heron sparrow raven kestrel finch osprey magpie plover swift wren egret puffin starling tanager grebe" ;;
+    gemstones) echo "amber jasper opal topaz quartz garnet beryl onyx zircon citrine peridot agate jade pearl amethyst emerald sapphire ruby" ;;
+    spices)    echo "saffron cumin paprika clove cardamom nutmeg ginger fennel turmeric anise pepper coriander cinnamon vanilla thyme oregano" ;;
+    tools)     echo "hammer chisel wrench mallet anvil ratchet auger plane clamp lathe pliers gouge rasp drill spanner socket vise" ;;
+    library)   echo "tome folio chapter prologue margin atlas almanac ledger quill parchment satchel lantern archive scroll index spine" ;;
+    random)    grep -E '^[a-z]{4,8}$' "$dict" | tr '\n' ' ' ;;
+    *)         return 1 ;;
+  esac
+}
+
+ALL_THEMES=(weather mountains coffee nautical space garden forest desert ocean \
+  mythology autumn winter kitchen music birds gemstones spices tools library)
+
+# Print 5 random distinct theme names.
+pick5() {
+  local pool=("${ALL_THEMES[@]}") k=${#ALL_THEMES[@]} out=() r
+  local j
+  for ((j = 0; j < 5 && k > 0; j++)); do
+    r=$(( $(rand) % k ))
+    out+=("${pool[$r]}")
+    pool[$r]="${pool[$((k - 1))]}"
+    unset 'pool[$((k - 1))]'
+    pool=("${pool[@]}")
+    k=$(( k - 1 ))
+  done
+  echo "${out[@]}"
+}
+
+# --- Parse args: a bare number is word count; a word is a theme name. -------
+count=4
+theme=""
+for arg in "$@"; do
+  if [[ "$arg" =~ ^[0-9]+$ ]]; then count="$arg"; else theme="$arg"; fi
+done
+
+if (( count < 1 )); then
+  echo "usage: passphrase [word-count] [theme]" >&2
+  exit 1
+fi
+
+# --- Pick a theme from the menu if one wasn't named. ------------------------
+if [[ -z "$theme" ]]; then
+  shuffle_label="↻ shuffle (show 5 more)"
+  random_label="random (dictionary)"
+  while [[ -z "$theme" ]]; do
+    five=( $(pick5) )
+    PS3=$'\nChoose a theme (number): '
+    select choice in "${five[@]}" "$shuffle_label" "$random_label"; do
+      case "${choice:-}" in
+        "$shuffle_label") break ;;            # re-enter loop -> draw 5 more
+        "$random_label")  theme="random"; break ;;
+        "")               : ;;                # invalid entry -> re-prompt
+        *)                theme="$choice"; break ;;
+      esac
+    done
+  done
+fi
+
+words=$(theme_words "$theme") || { echo "passphrase: unknown theme '$theme' (try: ${ALL_THEMES[*]})" >&2; exit 1; }
+
+# Normalize to one word per line.
+words=$(printf '%s\n' $words)
+n=$(printf '%s\n' "$words" | wc -l | tr -d ' ')
+if (( n < count )); then
+  echo "passphrase: theme '$theme' has only $n words; can't make a $count-word phrase" >&2
+  exit 1
+fi
+
+# Sample without replacement: remove each chosen word so none repeats.
+out=""
+remaining="$words"
+m=$n
+for ((i = 0; i < count; i++)); do
+  r=$(( $(rand) % m + 1 ))
+  w=$(printf '%s\n' "$remaining" | awk -v r="$r" 'NR==r')
+  out="${out:+$out-}$w"
+  remaining=$(printf '%s\n' "$remaining" | awk -v r="$r" 'NR!=r')
+  m=$(( m - 1 ))
+done
+
+# Append a random 2-digit number (10–99), dash-separated.
+num=$(( $(rand) % 90 + 10 ))
+printf '%s-%d\n' "$out" "$num"
