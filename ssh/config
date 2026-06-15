@@ -10,6 +10,14 @@ Host plex
   IdentitiesOnly yes
   KexAlgorithms -mlkem768x25519-sha256
 
+Host secondo
+  HostName secondo.home
+  User ken
+
+Host quarto
+  HostName quarto.home
+  User ken
+
 Host github.com
   HostName github.com
   User git
