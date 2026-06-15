@@ -120,3 +120,13 @@ done
 # Append a random 2-digit number (10–99), dash-separated.
 num=$(( $(rand) % 90 + 10 ))
 printf '%s-%d\n' "$out" "$num"
+
+# Entropy estimate (bits), assuming an attacker knows the pool + format:
+#   distinct ordered words from n: sum log2(n-i); plus the 90-value number.
+# Phrase goes to stdout (clean for piping); this rating goes to stderr.
+awk -v n="$n" -v c="$count" 'BEGIN {
+  b = log(90) / log(2)
+  for (i = 0; i < c; i++) b += log(n - i) / log(2)
+  label = (b < 40) ? "Weak" : (b < 60) ? "Fair" : (b < 80) ? "Strong" : "Very strong"
+  printf "# ~%d bits — %s (assumes attacker knows the scheme)\n", b + 0.5, label
+}' >&2
