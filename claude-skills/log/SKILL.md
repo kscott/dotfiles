@@ -112,19 +112,21 @@ Both doing and session log are non-negotiable — never do one without the other
 
 ### Step 4: Tidy working repos
 
-Ken's personal repos should not end a session with uncommitted work sitting in them. Check each and don't let changes linger.
+Ken's working repos should not end a session with uncommitted work sitting in them. Check the standing personal repos **plus the current working folder** — most sessions happen inside a repo (e.g. `~/dev/manager-bot`), and that repo must be tidied too, not just the personal list. The loop resolves each path to its repo root and de-dupes, so the current folder is always covered even when it isn't in the standing list.
 
 ```bash
-for r in ~/dotfiles ~/ai ~/Notes; do
-  git -C "$r" rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "=== $r (not a git repo on this machine — skip) ==="; continue; }
-  echo "=== $r ==="; git -C "$r" status --short
+for p in ~/dotfiles ~/ai ~/Notes "$PWD"; do
+  root=$(git -C "$p" rev-parse --show-toplevel 2>/dev/null) || { echo "=== $p (not a git repo on this machine — skip) ==="; continue; }
+  case "|$seen|" in *"|$root|"*) continue;; esac   # already checked
+  seen="$seen|$root"
+  echo "=== $root ==="; git -C "$root" status --short
 done
 ```
 
 For any repo that's dirty:
 1. Report the count of changed files (untracked folders expand — use `git -C <repo> status --short --untracked-files=all | wc -l` for the true file count).
 2. Commit in **logical, per-topic groups** (one project/concern per commit — don't sweep everything into one commit), with concise messages. Add only the files for each group explicitly; never blind `git add -A` across unrelated work.
-3. Push: `git pull --rebase origin main` then `git push origin main`. If the rebase is blocked by *unrelated* unstaged changes you're not committing yet, `git stash push <those files>` first and `git stash pop` after.
+3. **Always push after committing — never ask whether to push.** Push the **current branch**, not always `main` (e.g. manager-bot lives on `kscott/manager-bot-content-customized`): `b=$(git -C <repo> symbolic-ref --short HEAD); git -C <repo> pull --rebase origin "$b" && git -C <repo> push origin "$b"`. If the rebase is blocked by *unrelated* unstaged changes you're not committing yet, `git stash push <those files>` first and `git stash pop` after.
 4. End with `git status --short` empty for each repo.
 
 End-of-day commit/push trailer (per global rules):
