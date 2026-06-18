@@ -4,7 +4,7 @@ description: >
   Drive Ken's Jira board work for the Content Squad so he doesn't have to — Ken finds Jira
   exasperating and actively avoids it, so YOU operate it for him via the Atlassian MCP + REST API.
   Use this skill whenever Ken talks about: the content board / "Content Priorities" board / his
-  oversight board, what's "in flight", board triage / grooming / cleanup / hygiene, epics being
+  oversight board, what's "in flight", board triage / refinement / cleanup / hygiene, epics being
   misplaced or mis-statused, parking epics, what can be closed soon, team siloing, WIP / work-in-
   progress concentration, sprint vs non-sprint work, opportunistic or parked or pre-direction epics,
   or generally "help me make sense of / clean up the content board." Also triggers on board IDs
@@ -56,8 +56,8 @@ analysis, delegate to a subagent so the bulk output stays out of the main contex
 
 | Column | Status | Meaning |
 |---|---|---|
-| Backlog | Backlog (10020) | raw, not yet groomed |
-| On Deck | Refine (10198) | groomed, next up |
+| Backlog | Backlog (10020) | raw, not yet refined |
+| On Deck | Refine (10198) | refined, next up |
 | Parked | Selected for Development (10021), Blocked (10050) | stalled / paused |
 | In Progress | Started (10031) | actively driven |
 | Done | Won't Do (10377), Closed (6) | shipped / killed |
