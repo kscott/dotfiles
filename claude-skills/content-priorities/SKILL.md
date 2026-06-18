@@ -78,6 +78,27 @@ hand-build from scratch:
    `Content-Type: application/json` and `X-Atlassian-Token: no-check`.
 5. Verify via the agile config GET. The original editmodel is your revert source.
 
+## Theme palette (epic color-coding)
+
+Every non-Done epic carries exactly **one theme label**. Ken does NOT manage these — YOU apply and maintain them. He interacts with the *colors* (the **timeline view** "Color by → Label" is his preferred lens; also board card colors), never the labels themselves. The palette is a **small fixed vocabulary** — don't fragment it into per-epic tags. Expand it only when a genuinely new theme emerges from a team ask (then add a row here and re-commit).
+
+| Label | Color | Theme — what belongs |
+|---|---|---|
+| `kotlin-retirement` | Blue | Retiring/migrating the Kotlin services (BVS, CSS, CRAS) under PROD-3011 |
+| `ipn` | Green | IPN / BOWO route work + Retailer Distribution on the IPN |
+| `platform-dx` | Yellow | Internal platform, infra, tech-debt, DX, dev-tooling, rules-mcp, monolith decoupling, dependency/runtime upgrades |
+| `product` | Purple | Product / business-facing / saver-facing feature work |
+| `ops` | Grey | Perpetual containers — Renovate, Ongoing Maintenance, On-call. Never "complete"; de-emphasized. |
+
+Maintenance rules:
+- **Apply the theme label when an epic is created or re-triaged** — same action, so coverage stays complete. After any epic-creation, set its theme.
+- **Preserve existing non-theme labels** — set the union, never clobber. Some epics carry an extra functional label (e.g. `renovate-epic-2026` on TACO-3403, `on-call` on TACO-1912); theme labels are additive.
+- Periodically run `project = TACO AND issuetype = Epic AND statusCategory != Done` and confirm none are missing a theme label; theme any stragglers (don't guess wildly — pick by the epic's nature, flag genuine ambiguity to Ken).
+
+Surfacing the colors:
+- **Timeline:** "Color by → Label" (a view toggle; Jira auto-assigns colors per label value).
+- **Board card colors:** set via the internal endpoint (the editmodel's `cardColorConfig` is the read side; the write is `PUT /rest/greenhopper/1.0/rapidviewconfig/cardColors` — verify the exact path, then read-modify-write like columns, with `X-Atlassian-Token: no-check`). Color mode must be query/label-based — Priority/Assignee/Issue-Type are useless here (all Medium, mostly unassigned, all Epics).
+
 ## Status & transition IDs (TACO epic/story workflow — global transitions, verify if one fails)
 
 Statuses: Backlog `10020`, Refine `10198`, Ready For Development `10034`, Selected for Development
