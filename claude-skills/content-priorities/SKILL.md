@@ -78,6 +78,10 @@ hand-build from scratch:
    `Content-Type: application/json` and `X-Atlassian-Token: no-check`.
 5. Verify via the agile config GET. The original editmodel is your revert source.
 
+### Re-ranking (timeline / board row order) — DRIVABLE, one call
+Row order in the timeline and on the board is **Rank**. Unlike card colors, this IS reliably drivable:
+`PUT /rest/agile/1.0/issue/rank` with `{"issues":[...keys in desired top-to-bottom order...],"rankAfterIssue":"TACO-<topEpic>"}` (or `rankBeforeIssue`). **Array order is preserved**, up to 50 issues per call, returns **204 No Content**. So a full reorder is ONE call: make the intended top epic the anchor and pass all the rest, in order, with `rankAfterIssue: <top epic>`. Use a single clean curl (no `for`-loops, no `-o` file writes — the sandbox hook blocks those shapes; a lone `curl -X PUT … --data '…'` works). Verify with `project = TACO AND issuetype = Epic AND statusCategory != Done ORDER BY Rank ASC`. **Ken never drags rows — drive this for him.** Established good order (2026-06-18): In Progress (active) → Parked → On Deck (CSS cluster first) → Backlog → evergreen containers (3372/4210/3403) last.
+
 ## Theme palette (epic color-coding)
 
 Every non-Done epic carries exactly **one theme label**. Ken does NOT manage these — YOU apply and maintain them. He interacts with the *colors* (the **timeline view** "Color by → Label" is his preferred lens; also board card colors), never the labels themselves. The palette is a **small fixed vocabulary** — don't fragment it into per-epic tags. Expand it only when a genuinely new theme emerges from a team ask (then add a row here and re-commit).
