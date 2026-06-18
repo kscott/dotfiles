@@ -54,16 +54,29 @@ analysis, delegate to a subagent so the bulk output stays out of the main contex
 
 ## Board 1858 column → status map (verified 2026-06-18)
 
-| Column | Statuses |
-|---|---|
-| Backlog | Refine (10198) |
-| To Do | Backlog (10020), Ready For Development (10034) |
-| **Parked** | Selected for Development (10021), Blocked (10050) |
-| In Progress | Started (10031) |
-| Done | Won't Do (10377), Closed (6) |
+| Column | Status | Meaning |
+|---|---|---|
+| Backlog | Backlog (10020) | raw, not yet groomed |
+| On Deck | Refine (10198) | groomed, next up |
+| Parked | Selected for Development (10021), Blocked (10050) | stalled / paused |
+| In Progress | Started (10031) | actively driven |
+| Done | Won't Do (10377), Closed (6) | shipped / killed |
 
-Quirk: the column named "Backlog" holds the *Refine* status; the "To Do" column holds the *Backlog*
-status. Read column membership by status, not by name. Re-pull the config if the board may have changed.
+Ready For Development (10034) and the other In-Progress sub-statuses (Code Review, In Review, Ready for
+Acceptance, Development, Ready to Deploy, Ready for Design Review) are intentionally unmapped at the epic
+level. Re-pull the config if the board may have changed.
+
+### Changing columns (you CAN drive this, not just read it)
+The public Agile API is read-only for columns, but the internal endpoint the UI uses accepts writes:
+`PUT /rest/greenhopper/1.0/rapidviewconfig/columns`. Always read-modify-write the native shape — never
+hand-build from scratch:
+1. GET `.../rest/greenhopper/1.0/rapidviewconfig/editmodel?rapidViewId=1858` → take `.rapidListConfig.mappedColumns`.
+2. Mutate only what's needed (rename a column; change a column's `mappedStatuses` to `[{id:"..."}]`).
+3. **Preserve `isKanPlanColumn: true` on the Kanban backlog column** and each column's `id` — dropping the
+   flag returns `400 "Kanban backlog column not found"`.
+4. PUT `{currentStatisticsField:{id:"issueCount_"}, rapidViewId:1858, mappedColumns:[...]}` with headers
+   `Content-Type: application/json` and `X-Atlassian-Token: no-check`.
+5. Verify via the agile config GET. The original editmodel is your revert source.
 
 ## Status & transition IDs (TACO epic/story workflow — global transitions, verify if one fails)
 
