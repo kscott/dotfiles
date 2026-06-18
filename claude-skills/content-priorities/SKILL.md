@@ -97,7 +97,7 @@ Maintenance rules:
 
 Surfacing the colors:
 - **Timeline:** "Color by → Label" (a view toggle; Jira auto-assigns colors per label value).
-- **Board card colors:** set via the internal endpoint (the editmodel's `cardColorConfig` is the read side; the write is `PUT /rest/greenhopper/1.0/rapidviewconfig/cardColors` — verify the exact path, then read-modify-write like columns, with `X-Atlassian-Token: no-check`). Color mode must be query/label-based — Priority/Assignee/Issue-Type are useless here (all Medium, mostly unassigned, all Epics).
+- **Board card colors:** ALREADY CONFIGURED on board 1858 (Ken set it up in the UI, 2026-06-18): Card colors → strategy **Queries**, one rule per theme label (`labels = kotlin-retirement` → blue, `ipn` → green, `platform-dx` → yellow, `product` → purple, `ops` → grey). So just keep epics labeled — new epics inherit their color automatically; do NOT try to recreate the rules. (The programmatic write path was a dead end: `rapidviewconfig/cardColorStrategy` 404s and the env blocked further probing; only revisit if the scheme itself needs changing, and do it in the UI.)
 
 ## Status & transition IDs (TACO epic/story workflow — global transitions, verify if one fails)
 
