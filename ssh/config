@@ -15,7 +15,7 @@ Host secondo
   User ken
 
 Host quarto
-  HostName quarto.home
+  HostName 192.168.1.162
   User ken
 
 Host github.com
