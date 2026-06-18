@@ -18,6 +18,12 @@ Host quarto
   HostName 192.168.1.162
   User ken
 
+Host router
+  HostName 192.168.1.1
+  User root
+  IdentityFile ~/.ssh/id_ed25519
+  IdentitiesOnly yes
+
 Host github.com
   HostName github.com
   User git
