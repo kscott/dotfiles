@@ -11,7 +11,6 @@ Apps that require manual install (App Store or direct download). Review after ru
 - Focus for YouTube
 - Keynote Creator Studio
 - Looks Like Rain
-- Marked 2
 - MindNode
 - Numbers Creator Studio
 - Pages Creator Studio
@@ -41,6 +40,7 @@ Apps that require manual install (App Store or direct download). Review after ru
 | Garmin Express | https://www.garmin.com/en-US/software/express/mac/ |
 | Hazel | https://www.noodlesoft.com |
 | LaunchBar | https://www.obdev.at/products/launchbar/download.html |
+| Marked 3 | https://markedapp.com |
 | Moom | https://manytricks.com/moom/ |
 | OmniGraffle | https://www.omnigroup.com/omnigraffle/ |
 | OmniOutliner | https://www.omnigroup.com/omnioutliner/ |
