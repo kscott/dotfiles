@@ -134,6 +134,62 @@ which lands in the Parked column. Re-parent a story with `editJiraIssue` → `{"
    (e.g. all-spike investigation epics), preserve it in Confluence under the **Content Squad** page
    (id `1379893545`, space `TT`) before closing, and leave a pointer comment on the epic.
 
+## The overdue / date sweep
+
+Board 1858's working lens is the **timeline** ("Color by → Label"). An epic with no **Start Date**
+(`customfield_10152`) or no **due date** (`duedate`) **doesn't render there** — it's invisible exactly
+where Ken looks. The Monday `manager-bot` `jira-hygiene` skill won't catch this: it validates date
+*sanity* (duration-in-range, dates-within-parent) across the whole component, never date *presence*, and
+isn't scoped to this board. So date presence + currency on 1858 is **this** skill's job. Run on demand.
+
+Fields: Start Date = `customfield_10152` (i.e. `cf[10152]`), due date = standard `duedate`.
+
+**Two buckets, one read each.**
+
+1. **Missing dates** — active-column epics lacking a start or due date. Active = In Progress (Started),
+   Parked (Selected for Development, Blocked), On Deck (Refine). **Backlog is exempt** — undated raw
+   epics are fine there.
+   ```bash
+   curl -s -u "$ATLASSIAN_API_USER:$ATLASSIAN_API_TOKEN" \
+     --data-urlencode 'jql=project = TACO AND issuetype = Epic AND status IN ("Started","Selected for Development","Blocked","Refine") AND (duedate IS EMPTY OR cf[10152] IS EMPTY) ORDER BY Rank ASC' \
+     --data-urlencode 'fields=summary,status,duedate,customfield_10152' --data-urlencode 'maxResults=100' \
+     -G "https://ibotta.atlassian.net/rest/api/3/search/jql" \
+     | jq -r '.issues[] | [.key, .fields.status.name, (.fields.customfield_10152//"NO-START"), (.fields.duedate//"NO-DUE"), .fields.summary] | @tsv'
+   ```
+
+2. **Overdue** — non-Done epics whose due date is already past.
+   ```bash
+   curl -s -u "$ATLASSIAN_API_USER:$ATLASSIAN_API_TOKEN" \
+     --data-urlencode 'jql=project = TACO AND issuetype = Epic AND statusCategory != Done AND duedate < startOfDay() ORDER BY duedate ASC' \
+     --data-urlencode 'fields=summary,status,duedate,customfield_10152' --data-urlencode 'maxResults=100' \
+     -G "https://ibotta.atlassian.net/rest/api/3/search/jql" \
+     | jq -r '.issues[] | [.key, .fields.status.name, (.fields.duedate//"NO-DUE"), .fields.summary] | @tsv'
+   ```
+
+**Setting dates** — top-level fields, no read-modify-write needed (unlike board columns):
+```bash
+curl -s -u "$ATLASSIAN_API_USER:$ATLASSIAN_API_TOKEN" -X PUT -H 'Content-Type: application/json' \
+  "https://ibotta.atlassian.net/rest/api/3/issue/TACO-NNNN" \
+  --data '{"fields":{"customfield_10152":"2026-06-22","duedate":"2026-08-15"}}'
+```
+(Or MCP `editJiraIssue` with the same field payload.)
+
+**How to act — report + propose, then apply:**
+- **Missing dates:** propose a start (≈ today if already Started, else the next refinement window) and a
+  due (start + the epic's likely duration from scope). Setting/extending dates is light curation →
+  announce the one-liner and apply. If you can't infer a sensible duration, ask rather than guess.
+- **Overdue:** the due date slipped. Default fix is **re-date** to a realistic target, NOT a push-to-close.
+  Suggest closing only if the work is genuinely done/abandoned — and closing stays **confirm-first** (check
+  for stranded active children per the triage workflow).
+
+**Honor the same exceptions as parking** — don't mis-handle a known-good epic:
+- **Pre-direction foundation** (e.g. TACO-4137) — if overdue, re-date or clear the due date; never pitch as
+  a quick close. Parent direction is unsettled.
+- **Perpetual containers** (3372 Maintenance, 4210 On-call, 3403 Renovate) — carry full-period dates by
+  design. When one lapses (e.g. 4210 at quarter-end), roll it to the next period; don't flag as a problem.
+- **Opportunistic long-runners** (e.g. 4320) and **non-sprint platform work** (board 641) — fine to carry
+  distant due dates; don't compress them.
+
 ## Lessons that bit us (don't repeat)
 - Verify board/sprint state from the API; don't infer from activity dates alone.
 - "No story in the current sprint" ≠ "dead." It cleanly flags genuinely-dead epics, but over-flags the
