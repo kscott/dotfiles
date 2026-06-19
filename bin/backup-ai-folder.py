@@ -54,6 +54,37 @@ def trim_log():
         log(f"Trimming log from {len(lines)} to {LOG_MAX_LINES} lines")
         LOG_FILE.write_text("\n".join(lines[-LOG_MAX_LINES:]) + "\n")
 
+# --- Failure notification ---
+def notify_failure(msg):
+    """Surface a backup failure in Notification Center so it can't fail silently
+    (this job once failed every 30 min for a month unnoticed). Prefers
+    terminal-notifier (brew); falls back to osascript. -ignoreDnD pierces Focus.
+    Never let a notification problem mask the original error."""
+    body = msg.replace("\n", " ")[:240]
+    tn = shutil.which("terminal-notifier")
+    if tn:
+        try:
+            subprocess.run([
+                tn,
+                "-title", "AI Backup Failed",
+                "-message", body,
+                "-sound", "Basso",
+                "-ignoreDnD",
+                "-group", "ai-backup-failure",
+            ], capture_output=True, timeout=15)
+            return
+        except Exception:
+            pass
+    try:
+        safe = body.replace("\\", "").replace('"', "'")
+        subprocess.run(
+            ["osascript", "-e",
+             f'display notification "{safe}" with title "AI Backup Failed" sound name "Basso"'],
+            capture_output=True, timeout=15,
+        )
+    except Exception:
+        pass
+
 # --- Lock ---
 def acquire_lock():
     if LOCK_FILE.exists():
@@ -230,4 +261,5 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         log(f"ERROR: {e}")
+        notify_failure(str(e))
         sys.exit(1)

@@ -33,6 +33,9 @@ brew "gh"
 brew "googleworkspace-cli"  # `gws`: Docs, Sheets, Drive, Calendar, Slides, Forms
 brew "jq"                   # JSON parsing (gws skills pipe output through jq)
 
+# Notifications
+brew "terminal-notifier"   # macOS notifications from scripts (backup-ai/notes failure alerts)
+
 # Apps
 cask "iterm2"
 
