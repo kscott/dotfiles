@@ -106,6 +106,8 @@ Format:
 
 Append the new entry at the end of the file. The log is chronological, oldest first.
 
+**CRITICAL: Use the Edit tool to append — NEVER the Write tool.** Write overwrites the entire file and will destroy the entire session log history. Edit appends safely.
+
 Both doing and session log are non-negotiable — never do one without the other.
 
 ---
