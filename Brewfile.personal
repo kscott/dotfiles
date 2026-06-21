@@ -25,5 +25,7 @@ brew "swiftlint"
 brew "swiftformat"
 
 # Transcription
-# whisper-cli: install from source — see https://github.com/ggerganov/whisper.cpp
-# Model: ~/.whisper/ggml-medium.en.bin
+# FluidAudio (replaces whisper-cpp) — build from source:
+#   git clone https://github.com/FluidAudio/FluidAudio ~/dev/FluidAudio
+#   cd ~/dev/FluidAudio && swift build -c release --product fluidaudiocli
+# Model downloads automatically on first run (Parakeet TDT v3, ~470MB)

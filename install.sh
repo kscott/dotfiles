@@ -251,11 +251,9 @@ echo ""
 echo "Next steps (all machines):"
 echo "  1. Run: gh auth login"
 echo "  2. Add any personal tokens to ~/.zsh/secrets.zsh"
-echo "  3. Set up SSH key:"
-echo "       ssh-keygen -t ed25519 -C 'ken@optikos.net'"
-echo "       gh ssh-key add ~/.ssh/id_ed25519.pub --title \"\$(scutil --get ComputerName)\""
+echo "  3. SSH key: gh auth login creates one — or manually: ssh-keygen -t ed25519 -C 'ken@optikos.net'"
 echo "  4. iTerm2: quit iTerm2, run: python3 ~/bin/fix-claude-iterm-colors.py, then relaunch"
-echo "  5. Reminders CLI: gh repo clone kscott/reminders-cli ~/dev/reminders-cli && ~/dev/reminders-cli/reminders setup"
+echo "  5. Get Clear CLI: gh release download --repo kscott/get-clear --pattern 'get-clear.pkg' --dir /tmp && open /tmp/get-clear.pkg"
 
 if [[ $MACHINE == "work" ]]; then
   echo ""
@@ -285,7 +283,6 @@ if [[ $MACHINE == "personal" ]]; then
   echo "       ssh-copy-id -i ~/.ssh/id_ed25519.pub ken@<plex-ip>"
   echo "  8. Transmission: Preferences → Transfers → Management →"
   echo "       'Call script when torrent is complete' → ~/bin/sort-downloads.sh"
-  echo "  9. whisper model: place ggml-medium.en.bin at ~/.whisper/"
 fi
 
 echo ""

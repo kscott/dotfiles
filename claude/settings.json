@@ -55,6 +55,8 @@
       }
     }
   },
+  "awaySummaryEnabled": false,
   "tui": "fullscreen",
-  "theme": "dark-ansi"
+  "theme": "dark-ansi",
+  "verbose": true
 }
