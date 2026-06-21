@@ -26,6 +26,6 @@ brew "swiftformat"
 
 # Transcription
 # FluidAudio (replaces whisper-cpp) — build from source:
-#   git clone https://github.com/FluidAudio/FluidAudio ~/dev/FluidAudio
+#   git clone git@github.com:FluidInference/FluidAudio.git ~/dev/FluidAudio
 #   cd ~/dev/FluidAudio && swift build -c release --product fluidaudiocli
 # Model downloads automatically on first run (Parakeet TDT v3, ~470MB)
