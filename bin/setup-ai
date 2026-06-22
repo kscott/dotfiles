@@ -1,0 +1,25 @@
+#!/usr/bin/env zsh
+# Creates ~/ai with the standard structure.
+# Safe to re-run — all operations are idempotent.
+
+set -e
+
+AI="$HOME/ai"
+
+mkdir -p "$AI"
+mkdir -p "$AI/trinity-council"
+
+# Convenience symlinks to commonly accessed repos/folders
+ln -sfn "$HOME/dotfiles" "$AI/dotfiles"
+ln -sfn "$HOME/Notes" "$AI/notes"
+ln -sfn "$HOME/Library/Mobile Documents/com~apple~CloudDocs/Productivity" "$AI/productivity"
+
+# Project CLAUDE.md — lives in iCloud, synced across machines
+CLAUDE_SRC="$HOME/Library/Mobile Documents/com~apple~CloudDocs/Productivity/CLAUDE.md"
+if [[ -f "$CLAUDE_SRC" ]]; then
+    ln -sfn "$CLAUDE_SRC" "$AI/CLAUDE.md"
+else
+    echo "Warning: $CLAUDE_SRC not found — iCloud may not be synced yet. Re-run once it appears."
+fi
+
+echo "~/ai is ready."
