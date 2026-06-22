@@ -120,12 +120,14 @@ embedding from this file is not yet automated — note it exists but no action n
 
 ## When she says "I'm out of books"
 
-1. Connect her phone to Ken's Mac via USB.
-2. Open Finder → her iPhone → Books.
-3. Note which books are finished (she'll have told you, or check Books "Finished" list on her phone).
-4. Remove finished books from the Finder sync list → move those `.m4b` files from `Active/` to `Archive/`.
-5. Drag books from `Queue/` into the Finder sync list → move those files from `Queue/` to `Active/`.
-6. Sync.
+Ken will connect her phone and manage the Finder sync himself. Claude's job during this process
+is to move files between folders on command:
+
+- **"Move X to Archive"** (she finished it) → move from `Active/<Author>/` to `Archive/<Author>/`
+- **"Move X to Active"** (syncing it to her phone) → move from `Queue/<Author>/` to `Active/<Author>/`
+- Ken may name books loosely ("the Comey one", "the Osman") — look up the file in the right folder
+
+When Ken is done syncing, ask if he wants a quick summary of what's in Queue vs Active.
 
 ---
 
