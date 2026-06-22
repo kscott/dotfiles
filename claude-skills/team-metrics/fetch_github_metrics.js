@@ -192,7 +192,7 @@ function fetchMemberGhCli(displayName) {
   const mergedNums = new Set(mergedRaw.map(p => String(p.number)));
 
   const opened = openedRaw.map(pr => ({
-    num:    `#${pr.number}`,
+    num:    String(pr.number),
     title:  pr.title,
     date:   shortDate(pr.createdAt),
     repo:   pr.repository?.nameWithOwner || '',
@@ -215,7 +215,7 @@ function fetchMemberGhCli(displayName) {
   );
 
   const updated = updatedRaw.map(pr => ({
-    num:    `#${pr.number}`,
+    num:    String(pr.number),
     title:  pr.title,
     date:   shortDate(pr.updated_at),
     repo:   repoFromUrl(pr.repository_url),
@@ -235,7 +235,7 @@ function fetchMemberGhCli(displayName) {
   );
 
   const reviews_given = reviewsRaw.map(pr => ({
-    pr:    `#${pr.number}`,
+    pr:    String(pr.number),
     title: pr.title,
     date:  '',
     repo:  repoFromUrl(pr.repository_url),
@@ -399,14 +399,14 @@ function parseCanvasMarkdown(markdown, memberList, cfg) {
       if (!info) continue;
       const status = mergedNums.has(num) ? 'Merged' : 'Open';
       const date   = dateNearPR(num);
-      opened.push({ num: `#${num}`, title: `PR #${num}`, date: date || '', repo: info.repo, status });
+      opened.push({ num: String(num), title: `PR #${num}`, date: date || '', repo: info.repo, status });
     }
 
     const approvalsDetails = rows['Approvals']?.details || '';
     const approvalsCount   = parseInt(rows['Approvals']?.count) || 0;
     const reviews_given = [];
     for (const [, repo, num] of approvalsDetails.matchAll(/https?:\/\/github\.com\/([^/]+\/[^/]+)\/pull\/(\d+)/g)) {
-      reviews_given.push({ pr: `#${num}`, title: `PR #${num}`, date: '', repo });
+      reviews_given.push({ pr: String(num), title: `PR #${num}`, date: '', repo });
     }
 
     const comments_received = parseInt(rows['Comments']?.count) || 0;
@@ -492,7 +492,7 @@ async function fetchMemberGithubApi(displayName, token) {
   await sleep(RATE_DELAY_MS);
 
   const updated = (updatedRaw.items || []).map(pr => ({
-    num:    `#${pr.number}`,
+    num:    String(pr.number),
     title:  pr.title,
     date:   shortDate(pr.updated_at),
     repo:   repoFromUrl(pr.repository_url),
