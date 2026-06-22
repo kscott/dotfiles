@@ -7,7 +7,7 @@ description: >
   .transcript.vtt) or a single audio file. Auto-detects meeting title and
   attendees from Google Calendar using the Zoom filename's UTC timestamp. Uses
   whisper-cpp large-v3-turbo for transcription and the Zoom VTT for speaker
-  attribution. Maintains a glossary at `~/ai/transcribe-glossary.md` to
+  attribution. Maintains a glossary at `~/.claude/transcribe-glossary.txt` to
   correct recurring misrecognitions automatically.
 
   USE THIS SKILL when the user asks to "transcribe meeting", "transcribe this
@@ -67,7 +67,7 @@ Do not proceed until confirmed.
   cd ~/dev/FluidAudio && swift build -c release --product fluidaudiocli
   ```
 - Merge script at `~/.claude/skills/transcribe/merge_transcript.py` — no extra dependencies (stdlib only)
-- Optional: `~/ai/transcribe-glossary.txt` — custom vocab file for proper noun correction (see step 6)
+- Optional: `~/.claude/transcribe-glossary.txt` — custom vocab file for proper noun correction (see step 6)
 
 ### 5. Convert audio to whisper's expected format
 
@@ -86,7 +86,7 @@ Works transparently for `.m4a`, `.mp4`, `.mp3`, `.wav`.
   --output-json /tmp/meeting_whisper.json
 ```
 
-Add `--custom-vocab ~/ai/transcribe-glossary.txt` if the glossary file exists — it corrects proper nouns (team names, project names, technical terms) via CTC rescoring. See **Custom Vocabulary** section below.
+Add `--custom-vocab ~/.claude/transcribe-glossary.txt` if the glossary file exists — it corrects proper nouns (team names, project names, technical terms) via CTC rescoring. See **Custom Vocabulary** section below.
 
 **Model options** (benchmarked on M4 Mac Mini, 57-min recording):
 
@@ -160,14 +160,14 @@ Speaker map format: `"ID=Name,ID=Name"` using the string IDs from the diarizatio
 ### 8. Clean output and apply glossary
 
 - Detect trailing hallucinations (repeated phrases at end of audio) — drop them.
-- **Apply post-processing substitutions** from `~/ai/transcribe-glossary.txt` to the final transcript text. This applies to ALL transcripts regardless of source — FluidAudio, Zoom VTT, or anything else. Read the file, apply each term substitution (and aliases → canonical form) to the transcript markdown before writing the output file.
-- After the transcript is published, if Ken corrects a misrecognized name or term in conversation, propose adding it to `~/ai/transcribe-glossary.txt`. The same file drives both the FluidAudio custom vocab (acoustic correction at transcription time) and this post-processing pass (text correction after the fact).
+- **Apply post-processing substitutions** from `~/.claude/transcribe-glossary.txt` to the final transcript text. This applies to ALL transcripts regardless of source — FluidAudio, Zoom VTT, or anything else. Read the file, apply each term substitution (and aliases → canonical form) to the transcript markdown before writing the output file.
+- After the transcript is published, if Ken corrects a misrecognized name or term in conversation, propose adding it to `~/.claude/transcribe-glossary.txt`. The same file drives both the FluidAudio custom vocab (acoustic correction at transcription time) and this post-processing pass (text correction after the fact).
 
 ## Custom Vocabulary
 
 FluidAudio supports CTC-based vocabulary boosting — it corrects proper nouns the ASR misrecognizes without retraining the model. Applied at transcription time via `--custom-vocab`.
 
-**File:** `~/ai/transcribe-glossary.txt`
+**File:** `~/.claude/transcribe-glossary.txt`
 
 **Format:** one term per line; optionally `term: alias1, alias2` for phonetic variants
 
@@ -235,7 +235,8 @@ Tell Ken:
 
 ## External files
 
-- `~/ai/transcribe-glossary.md` — misrecognition glossary maintained by Claude. Applied automatically before publishing. Update it whenever a new consistent error is identified.
+- `~/.claude/transcribe-glossary.txt` — misrecognition glossary maintained by Claude. Applied automatically before publishing. Update it whenever a new consistent error is identified.
+- `~/.claude/transcribe-glossary-trinity.txt` — Trinity UMC-specific vocab; use instead of the main glossary when transcribing Trinity meetings.
 
 ## Troubleshooting
 
