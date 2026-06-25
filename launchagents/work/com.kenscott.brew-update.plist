@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.kenscott.brew-update</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/ken.scott/bin/brew-update.sh</string>
+    </array>
+
+    <!-- Saturday 9:07am (launchd Weekday 6 = Saturday). If the Mac is asleep at
+         this time, launchd runs the job on next wake rather than skipping it. -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>6</integer>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>7</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <!-- Kill job cleanly if system goes to sleep mid-run -->
+    <key>StandardAbandonProcessGroup</key>
+    <true/>
+
+    <!-- Script handles its own logging to ~/logs/brew-update.log —
+         discard stdout, capture unexpected stderr -->
+    <key>StandardOutPath</key>
+    <string>/dev/null</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/ken.scott/logs/brew-update-error.log</string>
+</dict>
+</plist>

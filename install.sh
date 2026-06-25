@@ -164,10 +164,6 @@ fi
 echo "==> Installing vim plugins"
 vim +PlugUpdate +qall
 
-echo "==> Installing crontab"
-crontab $DOTFILES/crontab
-echo "  installed"
-
 # ── Personal setup ─────────────────────────────────────────────────────────────
 
 if [[ $MACHINE == "personal" ]]; then
@@ -230,6 +226,7 @@ if [[ $MACHINE == "work" ]]; then
   link bin/backup-ai-folder.py    bin/backup-ai-folder.py
   link bin/backup-notes-folder.py bin/backup-notes-folder.py
   link bin/claude-statusline-git  bin/claude-statusline-git
+  link bin/brew-update.sh         bin/brew-update.sh
 
   echo "==> Installing LaunchAgents"
   mkdir -p "$HOME/Library/LaunchAgents"
