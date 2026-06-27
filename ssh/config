@@ -15,7 +15,7 @@ Host secondo
   User ken
 
 Host quarto
-  HostName 192.168.1.162
+  HostName quarto.home
   User ken
 
 Host router
