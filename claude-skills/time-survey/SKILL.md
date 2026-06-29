@@ -88,11 +88,38 @@ command. **Limitations — be honest about these:**
 - So: use derived numbers to fill non-responders and to sanity-check responders, but prefer self-reports. Flag derived rows as estimates to Ken.
 
 ### 5. Ken's own row (Manager column)
-Estimate from his **work calendar + the session log**, NOT `doing` (his `doing` is mostly
-personal/home/Trinity/homelab and must be excluded). Meetings come straight off the calendar
-(project vs non-project per the rule above). Non-meeting work for an EM is overwhelmingly Admin
-(board hygiene, kickoff, metrics, briefs, planning, email/Slack); genuine Development is usually
-near zero unless he actually shipped code that week.
+Run `manager_row_from_doing.py`. It has two modes:
+
+**Anchor mode (recommended — pass `--calendar ken.scott@ibotta.com`):** the most legit reading.
+Meetings come from the **calendar** (complete + accurate hard data), classified project vs
+non-project; the rest of a working week (`--hours`, default 40) is **non-meeting time**, split
+Dev/Admin by the ratio in his `doing` Work log (his EM heads-down work is ~all Admin — board
+hygiene, briefs, metrics, planning, email/Slack — so Dev ≈ 0 unless he shipped code). Only the
+total-hours denominator is an assumption; everything else is data.
+```
+uv run --with "google-workspace @ git+ssh://git@github.com/Ibotta/google-workspace-py.git" \
+  --with requests python3 manager_row_from_doing.py \
+  --start <wk-mon> --end <wk-fri> --calendar ken.scott@ibotta.com --out /tmp/mgr.json
+```
+- **Adjust `--hours` for FTO/holidays** — on an OOO week the 40h default dumps phantom hours into
+  Admin (his vacation week derived a bogus 96% Admin). Cut `--hours` to the hours actually worked.
+- Typical normal-week output: Dev ~0, meetings ~30–40% (project+non-project), Admin ~60–70%.
+  Meeting-heavy weeks (sprint planning/review, arch round-table) push meetings up — real signal.
+
+**doing-only mode (no `--calendar`):** proportional over logged Work time. Pure-python, no
+calendar access, but under-counts meetings Ken didn't log. Use only as a quick offline check.
+
+**Opt-in override tags:** during the survey week Ken can tag a `doing` entry with
+`@ts-dev` / `@ts-proj` / `@ts-nonproj` / `@ts-admin` to force its bucket (e.g. `@ts-dev` for a
+
+**Opt-in override tags:** during the survey week Ken can tag a `doing` entry with
+`@ts-dev` / `@ts-proj` / `@ts-nonproj` / `@ts-admin` to force its bucket (e.g. `@ts-dev` for a
+week he actually shipped code). The script honors these over inference. No year-round overhead —
+only tag when it matters.
+
+Cross-check against his **work calendar** (Step 4's calendar pull) if `doing` looks sparse for
+the week — calendar catches meetings he didn't log. Genuine Development for an EM is usually ~0
+unless he shipped product code.
 
 ### 6. Average by band, round to 100
 If a level has multiple members, average their four numbers. Round to whole numbers with
@@ -109,8 +136,10 @@ Values render as `X%` (USER_ENTERED). Verify row 13 shows 100% for each filled c
 Row 15 — only if someone worked beyond 40h that week. Default blank. Ask Ken; don't invent overtime.
 
 ## Scripts
+- `manager_row_from_doing.py` — build Ken's Manager-column row from his `doing` Work log for the week (honors `@ts-*` override tags; normalizes to % of logged time).
 - `derive_time_survey.py` — estimate the four buckets per person + per band from `metrics_data.json` + calendars (fallback for non-responders / sanity check).
 - `fill_survey.py` — write a band→percentages JSON into the team tab via `gws` (validates each column = 100%).
+- `survey_common.py` — shared meeting classifier, seniority-band map, and largest-remainder rounding (imported by the others).
 
 ## Notes
 - This is an org-shared sheet Accounting reads — show Ken the grid before writing, and confirm the title→band mapping.

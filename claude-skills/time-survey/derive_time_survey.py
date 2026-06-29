@@ -26,107 +26,22 @@ Add --no-calendar to skip the pull and use a recurring-overhead meeting model
 import argparse, json, sys
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+from survey_common import classify_meeting, band_for, round_to_100, as_count
 
 TZ = ZoneInfo("America/Denver")
 
-# ── Meeting classification ──────────────────────────────────────────────────
-# A calendar event with others is a MEETING. Training / team-building / social
-# events are Admin even though they're scheduled (per the survey definitions).
-ADMIN_EVENT_KW = ['training', 'workshop', 'hackathon', 'hack-a-thon', 'team building',
-                  'team-building', 'offsite', 'off-site', 'outing', 'celebration',
-                  'party', 'social', 'happy hour', 'lunch', 'coffee', 'onboarding',
-                  'orientation', 'myr', 'mid-year', 'learning', 'book club', 'rockies',
-                  'game', 'volunteer']
-NONPROJECT_KW = ['1:1', '1-1', 'one on one', 'standup', 'stand-up', 'all-hands',
-                 'all hands', 'town hall', 'office hours', 'retro', 'skip level',
-                 'skip-level', 'first team', 'em weekly', ' ems', 'staff meeting',
-                 'welcome', 'intro', 'hangout', 'check-in', 'check in', 'demo']
-PROJECT_KW = ['backlog', 'refinement', 'planning', 'sprint', 'kanban', 'scrum',
-              'design', 'architecture', 'arch ', 'code review', 'working session',
-              'data contract', 'kickoff', 'migration', 'bowo', 'ipn', 'retailer',
-              'configcat', 'selection router', 'gsi', 'spike', 'incident',
-              'postmortem', 'post-mortem', 'rca', 'epic', 'roadmap', 'review',
-              'discussion', 'sync', 'estimation', 'pairing']
-
-
-def classify_meeting(summary):
-    s = (summary or '').lower()
-    for kw in ADMIN_EVENT_KW:
-        if kw in s:
-            return 'admin'
-    # "Name / Name" titles are almost always 1:1s
-    if '/' in s and 'project' not in s:
-        return 'nonproject'
-    for kw in NONPROJECT_KW:
-        if kw in s:
-            return 'nonproject'
-    for kw in PROJECT_KW:
-        if kw in s:
-            return 'project'
-    return 'nonproject'   # ambiguous ad-hoc meetings are non-project by definition
-
-
-def is_weekday(dt):
-    return dt.weekday() < 5
-
-
-def event_hours(ev):
-    try:
-        s = datetime.fromisoformat(ev['start']['dateTime'])
-        e = datetime.fromisoformat(ev['end']['dateTime'])
-        return max(0.0, (e - s).total_seconds() / 3600.0)
-    except Exception:
-        return 0.0
-
 
 def pull_meeting_split(calendar_id, start_date, end_date):
-    """Return (project_h, nonproject_h, admin_event_h) from the live calendar,
-    applying the same skip rules as the team-metrics calendar fetcher."""
-    from google_workspace import CalendarClient
-    s_dt = datetime(start_date.year, start_date.month, start_date.day, tzinfo=TZ)
-    e_dt = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59, tzinfo=TZ)
-    cal = CalendarClient(calendar_id=calendar_id)
-    events = cal.get_events(start_date=s_dt, end_date=e_dt)
+    """(project_h, nonproject_h, admin_event_h) from the live calendar."""
+    from survey_common import pull_calendar_meetings
     proj = nonproj = admin_ev = 0.0
-    for ev in events:
-        if ev.get('status') == 'cancelled':
-            continue
-        st = ev.get('start', {})
-        if 'date' in st and 'dateTime' not in st:        # all-day → not a meeting
-            continue
-        try:
-            dt = datetime.fromisoformat(st['dateTime'])
-        except Exception:
-            continue
-        if not is_weekday(dt):
-            continue
-        summ = ev.get('summary', '')
-        low = summ.lower()
-        et = ev.get('eventType')
-        if et in ('outOfOffice', 'focusTime'):
-            continue
-        if ev.get('transparency') == 'transparent' or ev.get('availability') == 'AVAILABILITY_FREE':
-            continue
-        if any(w in low for w in ('lunch', 'clockwise', 'focus time', 'heads down',
-                                  'heads-down', 'do not book', 'deep work', 'no meeting')):
-            continue
-        atts = ev.get('attendees', [])
-        mine = next((a.get('responseStatus') for a in atts
-                     if a.get('email', '').lower() == calendar_id.lower()), None)
-        if mine == 'declined':
-            continue
-        if len(atts) == 0 and not ev.get('recurringEventId'):
-            continue
-        hrs = event_hours(ev)
-        if hrs <= 0:
-            continue
-        kind = classify_meeting(summ)
-        if kind == 'project':
-            proj += hrs
-        elif kind == 'admin':
-            admin_ev += hrs
+    for m in pull_calendar_meetings(calendar_id, start_date, end_date):
+        if m['kind'] == 'project':
+            proj += m['hours']
+        elif m['kind'] == 'admin':
+            admin_ev += m['hours']
         else:
-            nonproj += hrs
+            nonproj += m['hours']
     return proj, nonproj, admin_ev
 
 
@@ -136,10 +51,6 @@ def overhead_meeting_split(total_meeting_h, working_days):
     nonproj = min(total_meeting_h, 0.4 * working_days + 0.75)
     proj = max(0.0, total_meeting_h - nonproj)
     return proj, nonproj, 0.0
-
-
-def as_count(v):
-    return len(v) if isinstance(v, list) else (v or 0)
 
 
 def dev_ratio(role, prs, jira, on_call):
@@ -152,33 +63,6 @@ def dev_ratio(role, prs, jira, on_call):
     if on_call:
         r = min(0.90, r + 0.05)
     return r
-
-
-def round_to_100(d):
-    """Largest-remainder rounding of a dict of floats summing to ~100."""
-    floors = {k: int(v) for k, v in d.items()}
-    rem = 100 - sum(floors.values())
-    order = sorted(d, key=lambda k: d[k] - floors[k], reverse=True)
-    for i in range(rem):
-        floors[order[i % len(order)]] += 1
-    return floors
-
-
-def band_for(role):
-    r = (role or '').lower()
-    if 'manager' in r:
-        return 'Manager'
-    if 'distinguished' in r:
-        return 'Distinguished'
-    if 'principal' in r:
-        return 'Principal'
-    if 'staff' in r:
-        return 'Staff'
-    if 'senior' in r:
-        return 'Senior'
-    if 'intern' in r:
-        return None        # interns excluded from the survey
-    return 'Mid level'     # plain Engineer / Platform Engineer
 
 
 def main():
