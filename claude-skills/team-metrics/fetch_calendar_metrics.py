@@ -165,6 +165,9 @@ def fetch_member_calendar(calendar_id, start_date, end_date, member_name, squad_
     ooo_days = set(squad_ooo_days or [])
     meeting_hours = 0.0
     meeting_count = 0
+    # Defer counting until all OOO days are known (OOO events can appear in any
+    # order in the feed) so we can drop meetings that land on an OOO day.
+    candidate_meetings = []  # list of (event_date, hrs)
 
     # Count working days in range
     working_days = sum(1 for i in range((end_date - start_date).days + 1)
@@ -217,6 +220,14 @@ def fetch_member_calendar(calendar_id, start_date, end_date, member_name, squad_
         if is_clockwise(summary) or is_focus_block(summary):
             continue
 
+        # Skip events that show as Free / transparent (e.g. the recurring
+        # "No Meeting Mondays/Fridays" team holds) and timed focus-time blocks.
+        # These are not meetings; counting them inflates the meeting percentage.
+        if event.get('transparency') == 'transparent' \
+                or event.get('availability') == 'AVAILABILITY_FREE' \
+                or event.get('eventType') == 'focusTime':
+            continue
+
         # Check if member declined
         attendees = event.get('attendees', [])
         my_response = None
@@ -235,8 +246,15 @@ def fetch_member_calendar(calendar_id, start_date, end_date, member_name, squad_
 
         hrs = event_duration_hours(event)
         if hrs > 0:
-            meeting_hours += hrs
-            meeting_count += 1
+            candidate_meetings.append((event_dt.date(), hrs))
+
+    # Drop meetings that fall on an OOO day — the member wasn't there, and those
+    # days are removed from available_hours below; counting both double-inflates.
+    for d, hrs in candidate_meetings:
+        if d in ooo_days:
+            continue
+        meeting_hours += hrs
+        meeting_count += 1
 
     ooo_count = len(ooo_days)
     available_hours = (working_days - ooo_count) * 8

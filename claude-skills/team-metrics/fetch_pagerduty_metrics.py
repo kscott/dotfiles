@@ -100,8 +100,16 @@ metrics = {
     "members": {},
 }
 
+member_cfgs = config.get("members", {})
 for name in members:
-    is_on_call = name in oncall_names
+    # Match the config name OR an optional `pagerduty_name` alias — PagerDuty
+    # may use a legal/full name (e.g. "Nathaniel Ewert-Krocker") that differs
+    # from the display name in config (e.g. "Nate Ewert-Krocker").
+    aliases = {name}
+    pd_alias = member_cfgs.get(name, {}).get("pagerduty_name")
+    if pd_alias:
+        aliases.add(pd_alias)
+    is_on_call = bool(aliases & oncall_names)
     metrics["members"][name] = {
         "on_call": {
             "is_on_call": is_on_call,
