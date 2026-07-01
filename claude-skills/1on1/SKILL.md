@@ -37,6 +37,8 @@ Each person has their own subfolder, e.g. `nate-ewert-krocker/`. The subfolder n
 | Nate Ewert-Krocker | nate-ewert-krocker |
 | Brian Holman | brian-holman |
 | Matt Dolan | matt-dolan |
+| Titus Stone | titus-stone |
+| Jason Broucek (intern) | jason-broucek |
 
 ---
 
