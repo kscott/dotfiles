@@ -223,8 +223,7 @@ fi
 if [[ $MACHINE == "work" ]]; then
   echo "==> Linking bin scripts (work)"
   mkdir -p $HOME/bin
-  link bin/backup-ai-folder.py    bin/backup-ai-folder.py
-  link bin/backup-notes-folder.py bin/backup-notes-folder.py
+  link bin/backup-folder.py       bin/backup-folder.py
   link bin/claude-statusline-git  bin/claude-statusline-git
   link bin/brew-update.sh         bin/brew-update.sh
 

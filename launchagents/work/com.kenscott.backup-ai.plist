@@ -9,7 +9,8 @@
     <array>
         <string>/usr/bin/env</string>
         <string>python3</string>
-        <string>/Users/ken.scott/bin/backup-ai-folder.py</string>
+        <string>/Users/ken.scott/bin/backup-folder.py</string>
+        <string>ai</string>
     </array>
 
     <!-- Run every 30 minutes -->
