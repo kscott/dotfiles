@@ -6,8 +6,11 @@ description: >
   Takes a Zoom recording folder (containing the .m4a/.mp4 and ideally the
   .transcript.vtt) or a single audio file. Auto-detects meeting title and
   attendees from Google Calendar using the Zoom filename's UTC timestamp. Uses
-  whisper-cpp large-v3-turbo for transcription and the Zoom VTT for speaker
-  attribution. Maintains a glossary at `~/.claude/transcribe-glossary.txt` to
+  FluidAudio Parakeet v3 (ANE) for transcription; speaker attribution comes from
+  a Zoom VTT when present, else FluidAudio diarization — but co-located
+  same-room / single-mic recordings can't be attributed and produce an
+  unattributed prose transcript. Maintains a glossary at
+  `~/.claude/transcribe-glossary.txt` (post-processing text substitutions) to
   correct recurring misrecognitions automatically.
 
   USE THIS SKILL when the user asks to "transcribe meeting", "transcribe this
@@ -86,7 +89,7 @@ Works transparently for `.m4a`, `.mp4`, `.mp3`, `.wav`.
   --output-json /tmp/meeting_whisper.json
 ```
 
-Add `--custom-vocab ~/.claude/transcribe-glossary.txt` if the glossary file exists — it corrects proper nouns (team names, project names, technical terms) via CTC rescoring. See **Custom Vocabulary** section below.
+**Do NOT pass `--custom-vocab`.** FluidAudio's acoustic vocab boosting over-fires on short/common terms — it replaces ordinary words with vocab entries (verified: every "it's" → "Titus", "remote" → "Renovate"). The June 2026 build added opt-in controls (`--vocab-disable-spotter-rescue`, `--vocab-short-term-taper-pivot`, `--vocab-min-similarity`) but they do **not** reliably stop the over-fire for short entries. Correct proper nouns via **post-processing text substitution** instead (step 8) — it's deterministic and safe. See **Custom Vocabulary / glossary** below.
 
 **Model options** (benchmarked on M4 Mac Mini, 57-min recording):
 
@@ -97,7 +100,7 @@ Add `--custom-vocab ~/.claude/transcribe-glossary.txt` if the glossary file exis
 
 **Do NOT use whisper-cpp for transcription** — 13x real-time vs 356x. FluidAudio Parakeet v3 is 27x faster with comparable quality on English speech.
 
-The output JSON has the same segment structure as whisper-cpp — `merge_transcript.py` reads both formats.
+**Output JSON format:** FluidAudio v3 `--output-json` writes `{ text, wordTimings, ... }` — a full-transcript `text` string plus word-level `wordTimings`. It does **not** emit whisper-cpp's `transcription[].offsets` segment array, so `merge_transcript.py`'s whisper reader (which expects that older shape) returns nothing on this output. For an unattributed transcript, use the `text` field directly (paragraph it by sentence groups). Attribution-by-merge would first require rebuilding segments from `wordTimings`.
 
 ### 7. Parse Zoom VTT or run FluidAudio diarization
 
@@ -117,7 +120,11 @@ python3 ~/.claude/skills/transcribe/parse_vtt.py <vtt-path> > /tmp/meeting_attri
 - Stop and ask Ken: "VTT has `<unknown-label>` — who is that? A person, or a conference room?"
 - Don't publish wrong attribution.
 
-**If no VTT (audio-only recording):** use FluidAudio for diarization, then merge with whisper-cpp JSON.
+**If no VTT (audio-only recording):** decide whether attribution is even achievable before spending time on diarization.
+
+> **Co-located / single shared-mic recordings cannot be diarized.** When two people are in the same room recorded by one table or ambient mic (the common in-person 1:1 case), both voices land on one channel and diarization collapses to a single dominant cluster (e.g. `SPEAKER_1: 45 min, SPEAKER_2: 0 min`). This is a physical limit — no `--num-clusters` value, parameter tuning, or nicer room fixes it (better acoustics only reduce echo and ASR word errors). A Zoom cloud recording with a per-speaker VTT is the only reliable attribution path, and it is **not available for in-person same-room meetings** (nobody's on a separate Zoom client). In that case, skip diarization and produce an **unattributed prose transcript** from the `text` field, and note the limitation in the header.
+
+Only run the diarization steps below when the recording genuinely has speakers on separate mics/channels (e.g. a remote call captured per-participant). If you run it and it collapses to one cluster, stop and fall back to unattributed prose.
 
 **Step 1 — Diarize:**
 ```bash
@@ -161,29 +168,31 @@ Speaker map format: `"ID=Name,ID=Name"` using the string IDs from the diarizatio
 
 - Detect trailing hallucinations (repeated phrases at end of audio) — drop them.
 - **Apply post-processing substitutions** from `~/.claude/transcribe-glossary.txt` to the final transcript text. This applies to ALL transcripts regardless of source — FluidAudio, Zoom VTT, or anything else. Read the file, apply each term substitution (and aliases → canonical form) to the transcript markdown before writing the output file.
-- After the transcript is published, if Ken corrects a misrecognized name or term in conversation, propose adding it to `~/.claude/transcribe-glossary.txt`. The same file drives both the FluidAudio custom vocab (acoustic correction at transcription time) and this post-processing pass (text correction after the fact).
+- This post-processing text substitution is the **only** correction mechanism we use — we do not apply acoustic `--custom-vocab` boosting (see step 6).
+- After the transcript is published, if Ken corrects a misrecognized name or term in conversation, propose adding it to `~/.claude/transcribe-glossary.txt` as a correction pair.
 
-## Custom Vocabulary
+## Custom Vocabulary / glossary
 
-FluidAudio supports CTC-based vocabulary boosting — it corrects proper nouns the ASR misrecognizes without retraining the model. Applied at transcription time via `--custom-vocab`.
+**The glossary is a post-processing text-substitution list, not an acoustic vocab file.** We do **not** pass it to `--custom-vocab` — FluidAudio's CTC acoustic boosting over-fires on short/common terms and corrupts the transcript (verified: "it's" → "Titus", "remote" → "Renovate"), and the June 2026 opt-in controls don't reliably prevent it. Instead, step 8 reads this file and applies literal alias→canonical substitutions to the final transcript text.
 
 **File:** `~/.claude/transcribe-glossary.txt`
 
-**Format:** one term per line; optionally `term: alias1, alias2` for phonetic variants
+**Format:** `canonical: alias1, alias2` — the correct form on the left, comma-separated misrecognitions on the right.
 
 ```
-# Format: one term per line
-# Aliases: term: alias1, alias2
-Ibotta
-Titus
+# canonical: misrecognized variants
+Kristie Stallberger: Christy Stahlberger, Christy Stallberger
 Shelbey: Shelby
 Build Our Way Out: builder layout, builder way out
-TypeScript: typescript, Typescript
 ```
 
-**How it works:** uses a separate CTC encoder (97.5 MB, downloaded once) to score each vocab term against the audio, then replaces ASR output only when the acoustic evidence favors the vocab term. Guards against false positives on short/common words.
+**How it works (post-processing):** whole-word, case-insensitive replacement of each alias with its canonical form; longer aliases are applied first so they win over shorter ones. Only lines *with* aliases do anything — a bare term with no aliases is a harmless no-op.
 
-**When to update:** whenever Ken corrects a proper noun in conversation after a transcript is published. Propose the addition, confirm with Ken, then append to the file.
+**Rules for entries:**
+- Add only **distinctive correction pairs** — a specific wrong spelling → the right one.
+- Do **not** add bare short/common proper nouns (`Titus`, `Ibotta`, `Renovate`) as standalone terms. They do nothing here and only ever existed for the acoustic path we've dropped.
+
+**When to update:** whenever Ken corrects a misrecognized name/term after a transcript is published. Propose the pair, confirm with Ken, then append.
 
 ### 9. Write the transcript file
 
