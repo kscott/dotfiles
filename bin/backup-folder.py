@@ -28,6 +28,7 @@ from types import SimpleNamespace
 
 # --- Shared config ---
 HOME = Path.home()
+DOTFILES = Path(__file__).resolve().parents[1]  # repo root (this script lives in <dotfiles>/bin/)
 KEYCHAIN_SERVICE = "backup-dmg"       # login-keychain generic-password holding the DMG passphrase
 BACKUP_TTL_DAYS = 60
 LOG_MAX_LINES = 1000
@@ -409,6 +410,19 @@ def doctor_job(job):
     # 5. launchd agent loaded
     loaded = subprocess.run(["launchctl", "list", cfg.label], capture_output=True).returncode == 0
     checks.append((True if loaded else None, "launchd agent loaded", cfg.label if loaded else "not loaded"))
+
+    # 5b. Installed plist matches its dotfiles source (drift detection — the
+    # plist is copied, not symlinked, so a hand-edit to one can diverge)
+    installed_plist = HOME / "Library/LaunchAgents" / f"{cfg.label}.plist"
+    source_plist = DOTFILES / "launchagents/work" / f"{cfg.label}.plist"
+    if not installed_plist.exists():
+        checks.append((False, "plist installed", f"missing: {installed_plist}"))
+    elif not source_plist.exists():
+        checks.append((None, "plist matches dotfiles", f"no tracked source at {source_plist}"))
+    elif installed_plist.read_text() == source_plist.read_text():
+        checks.append((True, "plist matches dotfiles", "in sync"))
+    else:
+        checks.append((False, "plist matches dotfiles", "DRIFT — installed differs from dotfiles source; re-run install.sh or reconcile"))
 
     # 6. Logging healthy — fresh, recent success, bounded, no errors
     if not cfg.log.exists():
