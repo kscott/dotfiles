@@ -28,6 +28,7 @@ ICLOUD_BACKUP_PATH = HOME / "Library/Mobile Documents/com~apple~CloudDocs/Backup
 DMG_SIZE = "250m"
 DMG_VOLNAME = "notes-backup"
 MOUNT_POINT = Path(f"/Volumes/{DMG_VOLNAME}")
+KEYCHAIN_SERVICE = "backup-dmg"  # login-keychain generic-password holding the DMG passphrase
 SOURCE = HOME / "Notes"
 DEST = MOUNT_POINT / "current"
 BACKUP_BASE = MOUNT_POINT / "backups"
@@ -99,8 +100,23 @@ def dmg_is_mounted():
     result = subprocess.run(["mount"], capture_output=True, text=True)
     return str(MOUNT_POINT) in result.stdout
 
+def get_passphrase():
+    """Read the DMG passphrase from the login keychain. Fails loudly (which
+    triggers notify_failure) rather than silently producing an unencrypted or
+    unmountable image."""
+    result = subprocess.run(
+        ["security", "find-generic-password", "-w", "-s", KEYCHAIN_SERVICE],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        raise RuntimeError(
+            f"Could not read DMG passphrase from keychain (service '{KEYCHAIN_SERVICE}'): "
+            f"{result.stderr.strip()}"
+        )
+    return result.stdout.rstrip("\n")
+
 def create_dmg():
-    log(f"Creating DMG at {DMG_PATH} (size: {DMG_SIZE})")
+    log(f"Creating encrypted DMG at {DMG_PATH} (size: {DMG_SIZE})")
     DMG_PATH.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run([
         "hdiutil", "create",
@@ -108,8 +124,10 @@ def create_dmg():
         "-fs", "APFS",
         "-volname", DMG_VOLNAME,
         "-type", "UDIF",
+        "-encryption", "AES-256",
+        "-stdinpass",
         str(DMG_PATH),
-    ], check=True)
+    ], input=get_passphrase(), text=True, check=True)
 
 def mount_dmg():
     if dmg_is_mounted():
@@ -122,7 +140,8 @@ def mount_dmg():
             "hdiutil", "attach", str(DMG_PATH),
             "-mountpoint", str(MOUNT_POINT),
             "-nobrowse", "-quiet",
-        ])
+            "-stdinpass",
+        ], input=get_passphrase(), text=True)
         if result.returncode == 0:
             return
         if attempt < max_attempts:
