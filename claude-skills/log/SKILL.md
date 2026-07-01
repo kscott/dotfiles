@@ -1,6 +1,6 @@
 ---
 name: log
-description: Log a chunk of work to the doing CLI and the session log, and tidy any dirty personal repos. Use throughout the day (not just end of day) whenever Ken wants to capture what he just did — says /log, log it, log this, capture this, wrap up, done for now, or similar. Checks the calendar, writes the doing entry with correct time rounding, appends to the session log, and commits/pushes uncommitted changes in dotfiles/ai/Notes.
+description: Log a chunk of work to the doing CLI and the session log, and tidy any dirty personal repos. Use throughout the day (not just end of day) whenever Ken wants to capture what he just did — says /log, log it, log this, capture this, wrap up, done for now, or similar. Checks the calendar, writes the doing entry with correct time rounding, appends to the session log, and commits uncommitted changes in dotfiles/ai/Notes (pushing only repos that have a remote — ai/Notes are local-only).
 disable-model-invocation: true
 ---
 
@@ -128,7 +128,7 @@ done
 For any repo that's dirty:
 1. Report the count of changed files (untracked folders expand — use `git -C <repo> status --short --untracked-files=all | wc -l` for the true file count).
 2. Commit in **logical, per-topic groups** (one project/concern per commit — don't sweep everything into one commit), with concise messages. Add only the files for each group explicitly; never blind `git add -A` across unrelated work.
-3. **Always push after committing — never ask whether to push.** Push the **current branch**, not always `main` (e.g. manager-bot lives on `kscott/manager-bot-content-customized`): `b=$(git -C <repo> symbolic-ref --short HEAD); git -C <repo> pull --rebase origin "$b" && git -C <repo> push origin "$b"`. If the rebase is blocked by *unrelated* unstaged changes you're not committing yet, `git stash push <those files>` first and `git stash pop` after.
+3. **Push — but only if the repo has a remote.** Some work repos are intentionally **local-only** (no remote — e.g. `~/ai` and `~/Notes`, which are backed up via the DMG→iCloud pipeline, not GitHub; work/personnel data stays off any GitHub account). Check first: `git -C <repo> remote` — **if it prints nothing, the local commit IS the save. Do not add a remote or push; skip to step 4.** If a remote exists, **always push after committing — never ask whether to push.** Push the **current branch**, not always `main` (e.g. manager-bot lives on `kscott/manager-bot-content-customized`): `b=$(git -C <repo> symbolic-ref --short HEAD); git -C <repo> pull --rebase origin "$b" && git -C <repo> push origin "$b"`. If the rebase is blocked by *unrelated* unstaged changes you're not committing yet, `git stash push <those files>` first and `git stash pop` after.
 4. End with `git status --short` empty for each repo.
 
 End-of-day commit/push trailer (per global rules):
