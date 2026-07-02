@@ -199,6 +199,16 @@ if [[ $MACHINE == "personal" ]]; then
     fi
   done
 
+  echo "==> Linking ~/Sites files"
+  # ~/Sites is a protected macOS special folder that always exists —
+  # link files into it individually, don't try to create or replace
+  # the folder itself.
+  link sites/homelab.html        Sites/homelab.html
+  link sites/index.html          Sites/index.html
+  link sites/newtype.css         Sites/newtype.css
+  link sites/brain-in-a-jar.jpg  Sites/brain-in-a-jar.jpg
+  link sites/favicon.ico         Sites/favicon.ico
+
   echo "==> Linking bin scripts"
   mkdir -p $HOME/bin
   link bin/brew-update.sh             bin/brew-update.sh

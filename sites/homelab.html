@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Homelab</title>
+<style>
+  :root {
+    --bg: #f0f0f0;
+    --text: #333;
+    --heading: #999;
+    --group-label: #aaa;
+    --border: #ddd;
+    --card-bg: #fff;
+    --card-border: #e0e0e0;
+    --card-hover-bg: #fafafa;
+    --card-hover-border: #ccc;
+    --card-shadow: rgba(0,0,0,0.08);
+    --card-name: #222;
+    --card-desc: #999;
+    --card-url: #bbb;
+    --icon-bg: transparent;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1a;
+      --text: #ddd;
+      --heading: #888;
+      --group-label: #888;
+      --border: #333;
+      --card-bg: #242424;
+      --card-border: #333;
+      --card-hover-bg: #2a2a2a;
+      --card-hover-border: #444;
+      --card-shadow: rgba(0,0,0,0.4);
+      --card-name: #eee;
+      --card-desc: #999;
+      --card-url: #888;
+      --icon-bg: rgba(255,255,255,0.15);
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 2rem;
+    min-height: 100vh;
+  }
+
+  h1 {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--heading);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+  }
+
+  .group {
+    margin-bottom: 2.5rem;
+  }
+
+  .group-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--group-label);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.75rem;
+  }
+
+  a.card {
+    display: flex;
+    align-items: center;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    padding: 0.9rem 1rem;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    gap: 0.75rem;
+  }
+
+  a.card:hover {
+    background: var(--card-hover-bg);
+    border-color: var(--card-hover-border);
+    box-shadow: 0 2px 8px var(--card-shadow);
+  }
+
+  .card-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .card-name {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--card-name);
+    margin-bottom: 0.2rem;
+  }
+
+  .card-desc {
+    font-size: 0.75rem;
+    color: var(--card-desc);
+    margin-bottom: 0.4rem;
+    line-height: 1.3;
+  }
+
+  .card-url {
+    font-size: 0.68rem;
+    color: var(--card-url);
+    font-family: "SF Mono", "Fira Mono", monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card-icon {
+    flex-shrink: 0;
+    width: 52px;
+    height: 52px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--icon-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .card-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .card-icon img.small {
+    width: 32px;
+    height: 32px;
+    image-rendering: -webkit-optimize-contrast;
+  }
+
+  .card-icon .letter {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #fff;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Homelab</h1>
+
+<div class="group">
+  <div class="group-label">Media</div>
+  <div class="cards">
+
+    <a class="card" target="_blank" href="http://secondo.home:32400">
+      <div class="card-text">
+        <div class="card-name">Plex</div>
+        <div class="card-desc">Media server</div>
+        <div class="card-url">secondo.home:32400</div>
+      </div>
+      <div class="card-icon">
+        <img class="small" src="http://secondo.home:32400/favicon.ico" alt="" onerror="this.style.display='none'">
+      </div>
+    </a>
+
+    <a class="card" target="_blank" href="http://sonarr.home:8989">
+      <div class="card-text">
+        <div class="card-name">Sonarr</div>
+        <div class="card-desc">TV automation</div>
+        <div class="card-url">sonarr.home:8989</div>
+      </div>
+      <div class="card-icon">
+        <img class="small" src="http://sonarr.home:8989/favicon.ico" alt="" onerror="this.style.display='none'">
+      </div>
+    </a>
+
+    <a class="card" target="_blank" href="http://radarr.home:7878">
+      <div class="card-text">
+        <div class="card-name">Radarr</div>
+        <div class="card-desc">Movie automation</div>
+        <div class="card-url">radarr.home:7878</div>
+      </div>
+      <div class="card-icon">
+        <img src="http://radarr.home:7878/Content/Images/logo.png" alt="" onerror="this.style.display='none'">
+      </div>
+    </a>
+
+    <a class="card" target="_blank" href="http://prowlarr.home:9696">
+      <div class="card-text">
+        <div class="card-name">Prowlarr</div>
+        <div class="card-desc">Indexer manager</div>
+        <div class="card-url">prowlarr.home:9696</div>
+      </div>
+      <div class="card-icon">
+        <img src="http://prowlarr.home:9696/Content/Images/logo.png" alt="" onerror="this.style.display='none'">
+      </div>
+    </a>
+
+    <a class="card" target="_blank" href="http://qbit.home:8080">
+      <div class="card-text">
+        <div class="card-name">qBittorrent</div>
+        <div class="card-desc">Torrent client</div>
+        <div class="card-url">qbit.home:8080</div>
+      </div>
+      <div class="card-icon">
+        <img src="http://qbit.home:8080/images/qbittorrent-tray.svg" alt="" onerror="this.style.display='none'">
+      </div>
+    </a>
+
+  </div>
+</div>
+
+<div class="group">
+  <div class="group-label">Infrastructure</div>
+  <div class="cards">
+
+    <a class="card" target="_blank" href="http://homeassistant.home:8123">
+      <div class="card-text">
+        <div class="card-name">Home Assistant</div>
+        <div class="card-desc">Home automation</div>
+        <div class="card-url">homeassistant.home:8123</div>
+      </div>
+      <div class="card-icon">
+        <img src="http://homeassistant.home:8123/static/icons/favicon-192x192.png" alt="" onerror="this.style.display='none'">
+      </div>
+    </a>
+
+    <a class="card" target="_blank" href="http://grafana.home:3000">
+      <div class="card-text">
+        <div class="card-name">Grafana</div>
+        <div class="card-desc">Metrics dashboards</div>
+        <div class="card-url">grafana.home:3000</div>
+      </div>
+      <div class="card-icon">
+        <img src="http://grafana.home:3000/public/img/grafana_icon.svg" alt="" onerror="this.style.display='none'">
+      </div>
+    </a>
+
+    <a class="card" target="_blank" href="http://secondo.home:9000">
+      <div class="card-text">
+        <div class="card-name">Portainer</div>
+        <div class="card-desc">Container dashboard</div>
+        <div class="card-url">secondo.home:9000</div>
+      </div>
+      <div class="card-icon">
+        <div class="letter" style="background:#13BEF9;">P</div>
+      </div>
+    </a>
+
+    <a class="card" target="_blank" href="http://192.168.1.1">
+      <div class="card-text">
+        <div class="card-name">OPNsense</div>
+        <div class="card-desc">Router / firewall</div>
+        <div class="card-url">192.168.1.1</div>
+      </div>
+      <div class="card-icon">
+        <div class="letter" style="background:#D94F00;">O</div>
+      </div>
+    </a>
+
+    <a class="card" target="_blank" href="http://192.168.1.2">
+      <div class="card-text">
+        <div class="card-name">Unraid</div>
+        <div class="card-desc">NAS</div>
+        <div class="card-url">192.168.1.2</div>
+      </div>
+      <div class="card-icon">
+        <img class="small" src="http://192.168.1.2/favicon.ico" alt="" onerror="this.style.display='none'">
+      </div>
+    </a>
+
+  </div>
+</div>
+
+</body>
+</html>
