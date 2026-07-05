@@ -20,6 +20,16 @@ Read these three files at the start of every homelab session — don't derive co
 
 ---
 
+## Source of truth: config changes happen on Primo, in the repo
+
+All homelab configuration lives in the `homelab` git repo (`~/dev/homelab` on Primo → cloned to `/opt/homelab` on Secondo, Quarto, etc.). **Edit config in the repo on Primo first, commit, push, then pull it down to the target machine.** Never hand-edit a running machine's config over SSH as a standalone fix — even a "quick fix" becomes untracked drift the moment it's not also in the repo.
+
+If a config file that should change isn't tracked in the repo yet (e.g. `/etc/netplan/*.yaml`, a systemd unit, a sysctl drop-in), that's a sign it belongs there — add it to the repo as part of the fix, don't just edit it live and move on.
+
+Before ending a session that touched any machine's config, confirm the repo clone on every machine you touched is clean and pushed — not just the local/Primo copy. Drift hides on the remote clone (found twice: Quarto's Prometheus/docker-compose changes sat uncommitted for days; Secondo's WiFi/routing changes weren't in the repo at all).
+
+---
+
 ## Architecture principles
 
 **Apple Home is the primary UI.** HA handles what Apple Home can't:

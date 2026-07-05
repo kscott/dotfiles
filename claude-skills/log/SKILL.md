@@ -125,6 +125,16 @@ for p in ~/dotfiles ~/ai ~/Notes "$PWD"; do
 done
 ```
 
+**If this session SSH'd into any homelab host (secondo, quarto, router, vault, etc.) for anything config-related** — installing packages, editing netplan/systemd/sysctl, touching Docker Compose or Prometheus config — also check that host's `/opt/homelab` clone, not just the local repo:
+
+```bash
+for host in secondo quarto; do
+  ssh "$host" 'cd /opt/homelab && git fetch origin -q && git status -sb --short'
+done
+```
+
+Config changes belong in the `homelab` repo on Primo first (`~/dev/homelab`), committed and pushed, then pulled down to the target host — see the `homelab` skill's source-of-truth rule. But **hand-edits made directly on a host during a session still need to be caught here** even when that rule wasn't followed in the moment: check for local uncommitted changes on the host's clone *and* for the clone being behind `origin/main` (pull `--ff-only` to sync if behind and clean). Don't assume "I didn't touch the repo" means the repo is fine — drift on a remote clone is easy to miss because it's not in front of you the way a local `git status` is.
+
 For any repo that's dirty:
 1. Report the count of changed files (untracked folders expand — use `git -C <repo> status --short --untracked-files=all | wc -l` for the true file count).
 2. Commit in **logical, per-topic groups** (one project/concern per commit — don't sweep everything into one commit), with concise messages. Add only the files for each group explicitly; never blind `git add -A` across unrelated work.
