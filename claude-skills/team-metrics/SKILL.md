@@ -373,7 +373,15 @@ Writes to `metrics_data.atlassian.json → members[name].jira` and `members[name
 
 ### Step 5 — Slack messages
 
-> **⚠️ FYI — Slack MCP pagination**: The `slack_search_public` tool returns a maximum
+> **⚠️ MUST use `slack_search_public_and_private` — never `slack_search_public`.**
+> The team's primary channel `#content_squad` is a **private** group (ID starts with
+> `G`, not `C`), so a public-only search silently returns **zero** results for it —
+> undercounting every member's total and dropping the richest source of standup /
+> technical-discussion signal. `slack_search_public_and_private` covers public
+> channels, private channels, group DMs, and any DM the searcher is in. Always use it.
+> (It may prompt for consent — that's expected; proceed.)
+
+> **⚠️ FYI — Slack MCP pagination**: The search tool returns a maximum
 > of 20 results per call, but supports a `cursor` parameter for pagination. Paginate up
 > to **5 pages** (max 100 results total) per search by passing the `cursor` from each
 > response into the next call. Stop early if fewer than 20 results are returned (end of
@@ -398,6 +406,13 @@ health flag, not a metric to sum.
 **Pagination**: for each search, paginate up to 5 pages (passing `cursor` from each response) to collect up to 100 results. Stop early if a page returns fewer than 20 results. If all 5 pages are full (100 results) and a cursor still exists, record and display the count as `"100+"` to signal it is capped.
 
 Then run per-channel searches to get per-channel counts. Channels are discovered organically from search results — wherever the person posted, it appears.
+
+> **Sanity check before writing the file:** for any active engineer, `#content_squad`
+> should almost always appear (it's the standup + technical-discussion channel). If it's
+> missing or shows 0 for everyone, you almost certainly used the public-only search —
+> re-run with `slack_search_public_and_private`. A private channel that hits the 20-result
+> cap still needs full pagination; run a channel-scoped search
+> (`from:<@ID> in:<#GPS0NM7GQ> …`) to page through it completely.
 
 Collect:
 - `total_messages` — integer total (sum per-channel counts; treat "100+" as 100)
