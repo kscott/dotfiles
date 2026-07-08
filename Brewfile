@@ -15,6 +15,7 @@ brew "zsh-history-substring-search"
 # Ruby
 brew "chruby"
 brew "ruby-install"
+brew "ruby"          # provides libruby.dylib for vim's dynamic +ruby feature (not put on PATH)
 
 # Git
 brew "git-delta"    # better git diff pager (used in gitconfig)
