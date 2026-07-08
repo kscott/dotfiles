@@ -33,3 +33,4 @@ alias c='$HOME/.local/bin/claude'
 
 alias gc='cd ~/dev/get-clear && $HOME/.local/bin/claude'
 alias ai='cd ~/ai && $HOME/.local/bin/claude'
+alias pv='cd ~/dev/penventory && $HOME/.local/bin/claude'
