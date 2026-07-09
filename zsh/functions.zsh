@@ -1,5 +1,49 @@
 # Personal shell functions
 
+# claude: wraps the real binary so every entry point (this, c, gc, ai, pv, ...)
+# goes through the same pull-before/push-after sync of ~/claude-projects
+# (memory + session transcripts, symlinked at ~/.claude/projects). Refuses to
+# start on unsynced local state rather than silently building on top of it —
+# see kscott/claude-projects README for the full reasoning.
+claude() {
+  local repo="$HOME/claude-projects"
+
+  if [[ -n "$(git -C "$repo" status --porcelain 2>/dev/null)" ]]; then
+    echo "claude: $repo has uncommitted changes from a previous session." >&2
+    echo "        Resolve first: cd $repo && git status" >&2
+    return 1
+  fi
+
+  local ahead
+  ahead=$(git -C "$repo" rev-list '@{u}..' --count 2>/dev/null) || ahead=0
+  if [[ "$ahead" -gt 0 ]]; then
+    echo "claude: $repo has unpushed commits from a previous session." >&2
+    echo "        Resolve first: cd $repo && git push" >&2
+    return 1
+  fi
+
+  if ! git -C "$repo" pull --ff-only --quiet; then
+    echo "claude: failed to pull latest state into $repo." >&2
+    return 1
+  fi
+
+  _claude_sync_back() {
+    if [[ -n "$(git -C "$repo" status --porcelain 2>/dev/null)" ]]; then
+      git -C "$repo" add -A
+      git -C "$repo" commit -m "session $(date '+%Y-%m-%d %H:%M:%S')" --quiet
+      if ! git -C "$repo" push --quiet; then
+        echo "" >&2
+        echo "claude: WARNING — failed to push session/memory updates from $repo." >&2
+        echo "        Do NOT use claude for this project from another machine until resolved." >&2
+        echo "        Fix: cd $repo && git push" >&2
+      fi
+    fi
+  }
+  trap _claude_sync_back EXIT
+
+  command "$HOME/.local/bin/claude" "$@"
+}
+
 # Create directory (including parents) and cd into it
 mkcd() { mkdir -p "$@" && cd "$@" }
 

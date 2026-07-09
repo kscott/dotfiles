@@ -6,13 +6,13 @@ BACKUP="$HOME/.dotfiles_backup_$(date +%Y%m%d_%H%M%S)"
 
 # ── Machine type ───────────────────────────────────────────────────────────────
 
-if [[ $1 == "personal" ]]; then
+if [[ $1 == "home" ]]; then
   MACHINE="personal"
 elif [[ $1 == "work" ]]; then
   MACHINE="work"
 else
   echo "What kind of machine is this?"
-  echo "  1) Personal"
+  echo "  1) Home"
   echo "  2) Work"
   printf "Choice: "
   read choice
@@ -167,6 +167,27 @@ vim +PlugUpdate +qall
 # ── Personal setup ─────────────────────────────────────────────────────────────
 
 if [[ $MACHINE == "personal" ]]; then
+  echo "==> Linking claude-projects (Claude Code memory + session sync)"
+  # Separate private repo, not inside $DOTFILES — personal-only, deliberately
+  # never touched on a work machine. See kscott/claude-projects.
+  if [[ ! -d "$HOME/claude-projects" ]]; then
+    git clone git@github.com:kscott/claude-projects.git "$HOME/claude-projects"
+  fi
+  mkdir -p "$HOME/.claude"
+  if [[ -L "$HOME/.claude/projects" && "$(readlink "$HOME/.claude/projects")" == "$HOME/claude-projects" ]]; then
+    echo "  ok  ~/.claude/projects"
+  elif [[ -d "$HOME/.claude/projects" && ! -L "$HOME/.claude/projects" ]]; then
+    # Fresh machine already ran Claude Code once (real local content exists)
+    # — merge it in before linking, rather than clobbering either side.
+    cp -R "$HOME/.claude/projects/." "$HOME/claude-projects/"
+    rm -rf "$HOME/.claude/projects"
+    ln -s "$HOME/claude-projects" "$HOME/.claude/projects"
+    echo " link ~/.claude/projects -> ~/claude-projects (merged existing content)"
+  else
+    ln -sf "$HOME/claude-projects" "$HOME/.claude/projects"
+    echo " link ~/.claude/projects -> ~/claude-projects"
+  fi
+
   echo "==> Installing LaunchAgents"
   mkdir -p "$HOME/Library/LaunchAgents"
   for plist in $DOTFILES/launchagents/personal/*.plist; do
