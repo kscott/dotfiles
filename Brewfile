@@ -53,3 +53,7 @@ cask "font-source-sans-3"
 
 # JavaScript
 brew "node"
+
+# Containers
+brew "container"    # Apple's native container CLI (Docker-compatible, OCI images) — used for
+                     # local Dockerfile verification; native to Apple Silicon + macOS 26 Tahoe
