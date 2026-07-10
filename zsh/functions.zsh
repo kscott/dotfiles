@@ -27,17 +27,22 @@ claude() {
     return 1
   fi
 
+  # not `local` — EXIT traps fire after the function's own locals are torn
+  # down, so _claude_sync_back needs a variable that outlives claude() itself.
+  _claude_repo="$repo"
+
   _claude_sync_back() {
-    if [[ -n "$(git -C "$repo" status --porcelain 2>/dev/null)" ]]; then
-      git -C "$repo" add -A
-      git -C "$repo" commit -m "session $(date '+%Y-%m-%d %H:%M:%S')" --quiet
-      if ! git -C "$repo" push --quiet; then
+    if [[ -n "$(git -C "$_claude_repo" status --porcelain 2>/dev/null)" ]]; then
+      git -C "$_claude_repo" add -A
+      git -C "$_claude_repo" commit -m "session $(date '+%Y-%m-%d %H:%M:%S')" --quiet
+      if ! git -C "$_claude_repo" push --quiet; then
         echo "" >&2
-        echo "claude: WARNING — failed to push session/memory updates from $repo." >&2
+        echo "claude: WARNING — failed to push session/memory updates from $_claude_repo." >&2
         echo "        Do NOT use claude for this project from another machine until resolved." >&2
-        echo "        Fix: cd $repo && git push" >&2
+        echo "        Fix: cd $_claude_repo && git push" >&2
       fi
     fi
+    unset _claude_repo
   }
   trap _claude_sync_back EXIT
 
