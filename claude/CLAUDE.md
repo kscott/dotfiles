@@ -17,7 +17,7 @@ GitHub: kscott | Email: ken@optikos.net
 
 Claude MUST NOT invoke `sed` via the Bash tool for any purpose — file modification, in-place substitution, line filtering, text transformation, reading specific line ranges, or any other use. No exceptions exist. This prohibition applies regardless of working directory, project, or how innocuous the operation appears.
 
-A Claude session at work ran a `sed` command that destroyed days of work. No backup. No Read first. Just data loss and "oops." A PreToolUse hook in `~/.claude/settings.json` blocks `sed` mechanically. The hook is the enforcement; this rule is the reason.
+A Claude session at work ran a `sed` command that destroyed days of work. No backup. No Read first. Just data loss and "oops." `~/bin/sed` is a shim that refuses to run when invoked by Claude Code (detected via the `CLAUDECODE` env var) and execs the real `/usr/bin/sed` otherwise — it blocks the binary itself, not just the literal word "sed" in a command string, so it also catches indirect invocation (a subprocess call, `find -exec`, `xargs`, etc.). The shim is the enforcement; this rule is the reason.
 
 **The correct tools:**
 - File modification → Edit tool

@@ -1,0 +1,9 @@
+#!/bin/bash
+# sed shim — blocks sed when invoked by Claude Code, passes through otherwise.
+# Claude Code sets CLAUDECODE=1 for every command it runs (verified in-session).
+# Interactive/human use is unaffected: CLAUDECODE is unset in a normal shell.
+if [[ -n "$CLAUDECODE" ]]; then
+  echo "sed is banned in Claude Code sessions — use the Edit tool instead." >&2
+  exit 1
+fi
+exec /usr/bin/sed "$@"

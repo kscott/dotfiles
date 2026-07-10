@@ -1,0 +1,14 @@
+Removed from claude/settings.json hooks.PreToolUse on 2026-07-10, after adding the
+CLAUDECODE-scoped bin/sed shim. Restore by pasting this object back into the
+hooks.PreToolUse array in claude/settings.json (alongside the Skill-matcher block)
+if the shim proves insufficient.
+
+{
+  "matcher": "Bash",
+  "hooks": [
+    {
+      "type": "command",
+      "command": "input=$(cat); cmd=$(echo \"$input\" | jq -r '.tool_input.command // empty'); if echo \"$cmd\" | grep -qE '\\bsed\\b'; then echo '{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"sed is banned — it destroyed days of work. Use the Edit tool instead.\"}}'; elif echo \"$cmd\" | perl -ne 'exit 0 if /\\b(echo|printf|cat)\\s[^|;&]*(?<!\\d)>(?!\\/dev\\/null)(?![&>])/; exit 1'; then echo '{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"Direct file writes via Bash are banned. Use the Write or Edit tool instead.\"}}'; elif echo \"$cmd\" | grep -qE 'git (reset --hard|push --force([^-]|$)|push -f|rebase -i)'; then echo '{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"Destructive git command blocked (--force-with-lease is allowed). Run it yourself if you mean it.\"}}'; elif echo \"$cmd\" | grep -qE 'doing\\.md'; then echo '{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"doing.md cannot be touched directly. Use the doing CLI.\"}}'; fi"
+    }
+  ]
+}

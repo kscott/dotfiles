@@ -274,6 +274,7 @@ if [[ $MACHINE == "personal" ]]; then
   link bin/music-gap.py               bin/music-gap.py
   link bin/music-rank.py              bin/music-rank.py
   link bin/archive-session-log.py    bin/archive-session-log.py
+  link bin/sed                       bin/sed
 fi
 
 # ── Work setup ─────────────────────────────────────────────────────────────────
