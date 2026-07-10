@@ -30,6 +30,11 @@
           {
             "type": "command",
             "command": "date '+%Y-%m-%d %H:%M %Z' > ~/.claude/work-clock"
+          },
+          {
+            "type": "command",
+            "command": "~/bin/claude-session-pull",
+            "timeout": 15
           }
         ]
       }
