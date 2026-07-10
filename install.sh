@@ -262,6 +262,7 @@ if [[ $MACHINE == "personal" ]]; then
   link bin/brew-update.sh             bin/brew-update.sh
   link bin/claude-status.sh           bin/claude-status.sh
   link bin/claude-session-pull        bin/claude-session-pull
+  link bin/claude-dotfiles-check      bin/claude-dotfiles-check
   link bin/fix-claude-iterm-colors.py bin/fix-claude-iterm-colors.py
   link bin/transcribe                 bin/transcribe
   link bin/sort-downloads.sh          bin/sort-downloads.sh
