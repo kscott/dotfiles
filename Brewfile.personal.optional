@@ -1,0 +1,14 @@
+# Optional personal Mac extras — install with: brew bundle --file=Brewfile.personal.optional
+# Prompted during install.sh; skip if not needed on this machine.
+
+# Music file tagging / splitting
+brew "shntool"      # shnsplit — split cue+FLAC into tracks
+brew "cuetools"     # cuetag.sh — tag split FLAC tracks from cue sheet
+cask "xld"          # X Lossless Decoder — audio conversion/tagging
+
+# Misc apps
+cask "balenaetcher"
+cask "calibre"
+cask "discord"
+cask "openaudible"
+cask "oscar"

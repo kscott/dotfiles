@@ -220,6 +220,15 @@ if [[ $MACHINE == "personal" ]]; then
   echo "==> Installing Homebrew packages (personal)"
   brew bundle --file="$DOTFILES/Brewfile.personal"
 
+  printf "Install optional casks/tools (music-tagging tools, Discord, Calibre, etc.)? [y/N] "
+  read optional_choice
+  if [[ $optional_choice == [yY]* ]]; then
+    echo "==> Installing Homebrew packages (personal, optional)"
+    brew bundle --file="$DOTFILES/Brewfile.personal.optional"
+  else
+    echo "  skipped optional packages (see Brewfile.personal.optional)"
+  fi
+
   echo "==> Installing Get Clear zsh completions"
   mkdir -p "$HOME/.local/share/zsh/site-functions"
   for tool in reminders calendar contacts mail sms; do
