@@ -18,6 +18,8 @@ Usage:
   archive-session-log.py --dry-run --source FILE test against a specific file
 """
 
+from __future__ import annotations
+
 import shlex
 import subprocess
 import sys
