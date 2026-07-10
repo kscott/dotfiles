@@ -141,9 +141,9 @@ For any repo that's dirty:
 3. **Push — but only if the repo has a remote.** Some work repos are intentionally **local-only** (no remote — e.g. `~/ai` and `~/Notes`, which are backed up via the DMG→iCloud pipeline, not GitHub; work/personnel data stays off any GitHub account). Check first: `git -C <repo> remote` — **if it prints nothing, the local commit IS the save. Do not add a remote or push; skip to step 4.** If a remote exists, **always push after committing — never ask whether to push.** Push the **current branch**, not always `main` (e.g. manager-bot lives on `kscott/manager-bot-content-customized`): `b=$(git -C <repo> symbolic-ref --short HEAD); git -C <repo> pull --rebase origin "$b" && git -C <repo> push origin "$b"`. If the rebase is blocked by *unrelated* unstaged changes you're not committing yet, `git stash push <those files>` first and `git stash pop` after.
 4. End with `git status --short` empty for each repo.
 
-End-of-day commit/push trailer (per global rules):
+End-of-day commit/push trailer (per global rules). Use the **actual model running this session** — check the system prompt / environment info fresh each time; never copy a name from a prior commit, this file's edit history, or any example:
 ```
-Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+Co-Authored-By: Claude <model name and version from this session's own environment info> <noreply@anthropic.com>
 ```
 
 Don't force-push or rewrite already-pushed history without asking. If something in the working tree looks unexpected (a deletion you didn't make, a file you don't recognize), surface it rather than committing it.
