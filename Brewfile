@@ -50,6 +50,8 @@ cask "font-fira-mono-nerd-font"
 cask "font-fira-sans"
 cask "font-source-code-pro"
 cask "font-source-sans-3"
+cask "font-cascadia-code"
+cask "font-cascadia-code-nf"
 
 # JavaScript
 brew "node"
