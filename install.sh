@@ -188,6 +188,24 @@ if [[ $MACHINE == "personal" ]]; then
     echo " link ~/.claude/projects -> ~/claude-projects"
   fi
 
+  echo "==> Cloning workbench (~/ai — personal Claude Code workspace)"
+  # Separate private repo, not inside $DOTFILES — personal-only, deliberately
+  # never touched on a work machine (work ~/ai stays local-only). See kscott/workbench.
+  if [[ -d "$HOME/ai/.git" ]]; then
+    echo "  ok  ~/ai"
+  elif [[ -d "$HOME/ai" ]]; then
+    # Fresh machine already has a ~/ai (e.g. Claude Code ran once and created
+    # .claude/settings.local.json) — merge it in rather than clobbering either side.
+    git clone git@github.com:kscott/workbench.git "$HOME/ai.tmp"
+    cp -R "$HOME/ai/." "$HOME/ai.tmp/"
+    rm -rf "$HOME/ai"
+    mv "$HOME/ai.tmp" "$HOME/ai"
+    echo "  cloned ~/ai (merged existing content)"
+  else
+    git clone git@github.com:kscott/workbench.git "$HOME/ai"
+    echo "  cloned ~/ai"
+  fi
+
   echo "==> Installing LaunchAgents"
   mkdir -p "$HOME/Library/LaunchAgents"
   for plist in $DOTFILES/launchagents/personal/*.plist; do
