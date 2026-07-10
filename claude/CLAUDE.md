@@ -113,6 +113,23 @@ This applies even when the action seems obvious. Especially then.
 
 ---
 
+## Git: commit and push once work is done — don't ask
+
+In any repo, once a coherent unit of work is complete, commit and push it without asking first.
+This is the standing default, not a one-time approval — it overrides the general instinct to
+confirm before committing.
+
+Why: "these are repos. Once work is done, that is what you do — commit and push." (2026-07-10)
+He works across multiple machines and relies on the remote being current; a commit sitting
+local-only blocks him from picking work back up elsewhere.
+
+This does not cover destructive or hard-to-reverse git operations — force-push, `reset --hard`,
+`rebase -i`, discarding uncommitted work. Those still follow the normal confirm-first rule under
+"Show work before acting" above. It also doesn't mean committing mid-edit — use judgment about
+what counts as a done, coherent unit, same as always.
+
+---
+
 ## Tools and workarounds
 
 When an old tool version is causing problems or requiring workarounds, flag it and update via brew before engineering around the limitation.
