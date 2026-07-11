@@ -217,14 +217,22 @@ if [[ $MACHINE == "personal" ]]; then
     echo "  loaded $name"
   done
 
-  echo "==> NOT auto-installed (require sudo — run manually if this machine needs them):"
+  echo "==> Installing LaunchDaemons (sudo required)"
   for plist in $DOTFILES/launchdaemons/personal/*.plist; do
     name=$(basename $plist)
-    echo "  sudo cp $plist /Library/LaunchDaemons/$name && sudo launchctl bootstrap system /Library/LaunchDaemons/$name"
+    dst="/Library/LaunchDaemons/$name"
+    label="${name%.plist}"
+    sudo cp $plist $dst
+    sudo launchctl bootout system/$label 2>/dev/null || true
+    sudo launchctl bootstrap system $dst
+    echo "  loaded $name"
   done
+
+  echo "==> Installing newsyslog.d configs (sudo required)"
   for conf in $DOTFILES/newsyslog.d/*.conf; do
     name=$(basename $conf)
-    echo "  sudo cp $conf /etc/newsyslog.d/$name"
+    sudo cp $conf /etc/newsyslog.d/$name
+    echo "  installed $name"
   done
 
   echo "==> Installing Homebrew packages (personal)"
