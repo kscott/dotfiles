@@ -217,6 +217,16 @@ if [[ $MACHINE == "personal" ]]; then
     echo "  loaded $name"
   done
 
+  echo "==> NOT auto-installed (require sudo — run manually if this machine needs them):"
+  for plist in $DOTFILES/launchdaemons/personal/*.plist; do
+    name=$(basename $plist)
+    echo "  sudo cp $plist /Library/LaunchDaemons/$name && sudo launchctl bootstrap system /Library/LaunchDaemons/$name"
+  done
+  for conf in $DOTFILES/newsyslog.d/*.conf; do
+    name=$(basename $conf)
+    echo "  sudo cp $conf /etc/newsyslog.d/$name"
+  done
+
   echo "==> Installing Homebrew packages (personal)"
   brew bundle --file="$DOTFILES/Brewfile.personal"
 

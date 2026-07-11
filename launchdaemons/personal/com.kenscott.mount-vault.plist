@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.kenscott.mount-vault</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/sh</string>
+		<string>-c</string>
+		<string>mkdir -p /Volumes/Vault; mount_nfs -o resvport,bg 192.168.1.2:/mnt/user/data /Volumes/Vault</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>/var/log/mount-vault.log</string>
+	<key>StandardErrorPath</key>
+	<string>/var/log/mount-vault.log</string>
+</dict>
+</plist>
