@@ -349,25 +349,28 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--fix",    action="store_true", help="Apply joins (default is dry run)")
     parser.add_argument("--author", metavar="NAME",      help="Limit to one author folder")
+    parser.add_argument("--root",   metavar="PATH",      help="Override archive root (default: Archive/)")
     args = parser.parse_args()
+
+    archive = Path(args.root) if args.root else ARCHIVE
 
     setup_logging()
     mode = "LIVE" if args.fix else "DRY RUN"
     log.info("=== audiobook-join started [%s] ===", mode)
-    log.info("Archive: %s", ARCHIVE)
+    log.info("Archive: %s", archive)
 
-    if not ARCHIVE.exists():
-        log.error("Archive not found: %s", ARCHIVE)
+    if not archive.exists():
+        log.error("Archive not found: %s", archive)
         sys.exit(1)
 
     if args.author:
-        author_dir = ARCHIVE / args.author
+        author_dir = archive / args.author
         if not author_dir.is_dir():
             log.error("Author folder not found: %s", author_dir)
             sys.exit(1)
-        books = [b for b in discover_books(ARCHIVE) if b.parent == author_dir]
+        books = [b for b in discover_books(archive) if b.parent == author_dir]
     else:
-        books = discover_books(ARCHIVE)
+        books = discover_books(archive)
     log.info("Found %d book directories to process", len(books))
 
     errors = skipped = success = 0
@@ -404,7 +407,7 @@ def main():
         return
 
     log.info("=== Flatten pass ===")
-    flattened = flatten_pass(ARCHIVE)
+    flattened = flatten_pass(archive)
     log.info("=== Flatten done: %d files moved ===", flattened)
 
 

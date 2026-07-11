@@ -377,25 +377,28 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--fix",    action="store_true", help="Apply changes (default is dry run)")
     parser.add_argument("--author", metavar="NAME",      help="Limit to one author folder")
+    parser.add_argument("--root",   metavar="PATH",      help="Override archive root (default: Archive/)")
     args = parser.parse_args()
+
+    archive = Path(args.root) if args.root else ARCHIVE
 
     setup_logging()
     mode = "LIVE" if args.fix else "DRY RUN"
     log.info("=== audiobook-tags started [%s] ===", mode)
-    log.info("Archive: %s", ARCHIVE)
+    log.info("Archive: %s", archive)
 
     calibre = load_calibre_series(CALIBRE_DB)
     if not calibre:
         log.warning("Calibre DB not found or empty — series tags will not be checked")
 
     if args.author:
-        author_dirs = [ARCHIVE / args.author]
+        author_dirs = [archive / args.author]
         if not author_dirs[0].exists():
             log.error("Author folder not found: %s", author_dirs[0])
             sys.exit(1)
     else:
         author_dirs = sorted(
-            d for d in ARCHIVE.iterdir()
+            d for d in archive.iterdir()
             if d.is_dir() and not d.name.startswith(".")
         )
 

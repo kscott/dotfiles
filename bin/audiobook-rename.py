@@ -254,7 +254,10 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--fix",    action="store_true", help="Apply renames (default: dry run)")
     parser.add_argument("--author", metavar="NAME",      help="Limit to one author folder")
+    parser.add_argument("--root",   metavar="PATH",      help="Override archive root (default: Archive/)")
     args = parser.parse_args()
+
+    archive = Path(args.root) if args.root else ARCHIVE
 
     if not CALIBRE_DB.exists():
         print(f"Calibre DB not found: {CALIBRE_DB}", file=sys.stderr)
@@ -266,13 +269,13 @@ def main():
     print(f"Calibre: {sum(len(v) for v in calibre.values())} books indexed\n")
 
     if args.author:
-        author_dirs = [ARCHIVE / args.author]
+        author_dirs = [archive / args.author]
         if not author_dirs[0].is_dir():
             print(f"Author folder not found: {author_dirs[0]}", file=sys.stderr)
             sys.exit(1)
     else:
         author_dirs = sorted(
-            d for d in ARCHIVE.iterdir()
+            d for d in archive.iterdir()
             if d.is_dir() and not d.name.startswith(".")
         )
 

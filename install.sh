@@ -272,6 +272,7 @@ if [[ $MACHINE == "personal" ]]; then
   link bin/audiobook-tags.py          bin/audiobook-tags.py
   link bin/audiobook-rename.py        bin/audiobook-rename.py
   link bin/audiobook-calibre.py       bin/audiobook-calibre.py
+  link bin/audiobook-watch.py         bin/audiobook-watch.py
   link bin/music-blurbs.py            bin/music-blurbs.py
   link bin/music-gap.py               bin/music-gap.py
   link bin/music-rank.py              bin/music-rank.py
