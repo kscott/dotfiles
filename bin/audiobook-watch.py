@@ -177,8 +177,8 @@ def run_script(name: str, author: str, log_ctx: str) -> bool:
 def notify(title: str, message: str):
     try:
         subprocess.run(
-            ["osascript", "-e",
-             f'display notification "{message}" with title "{title}"'],
+            ["terminal-notifier", "-title", title, "-message", message,
+             "-group", "audiobook-watch"],
             capture_output=True,
         )
     except Exception:
