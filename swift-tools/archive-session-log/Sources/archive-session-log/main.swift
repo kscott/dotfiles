@@ -124,6 +124,62 @@ func trimLog() {
     }
 }
 
+// MARK: - Failure notifications
+//
+// Mirrors backup-folder.py's notify_failure(): terminal-notifier first, falling
+// back to osascript's "display notification" (a pure Notification Center call,
+// not a file operation — unrelated to the iCloud TCC issue this tool works around).
+// Both are timeout-bounded so a notification problem can never hang the job.
+
+@discardableResult
+func runProcessWithTimeout(_ path: String, arguments: [String], timeout: TimeInterval) -> Bool {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: path)
+    process.arguments = arguments
+    process.standardOutput = FileHandle.nullDevice
+    process.standardError = FileHandle.nullDevice
+    let semaphore = DispatchSemaphore(value: 0)
+    process.terminationHandler = { _ in semaphore.signal() }
+    do {
+        try process.run()
+    } catch {
+        return false
+    }
+    if semaphore.wait(timeout: .now() + timeout) == .timedOut {
+        process.terminate()
+        return false
+    }
+    return process.terminationStatus == 0
+}
+
+func findTerminalNotifier() -> String? {
+    for candidate in ["/opt/homebrew/bin/terminal-notifier", "/usr/local/bin/terminal-notifier"]
+    where FileManager.default.isExecutableFile(atPath: candidate) {
+        return candidate
+    }
+    return nil
+}
+
+func notifyFailure(_ msg: String) {
+    let body = String(msg.replacingOccurrences(of: "\n", with: " ").prefix(240))
+    if let tn = findTerminalNotifier() {
+        let ok = runProcessWithTimeout(tn, arguments: [
+            "-title", "Session Log Archive Failed",
+            "-message", body,
+            "-sound", "Basso",
+            "-ignoreDnD",
+            "-group", "session-log-archive-failure",
+        ], timeout: 15)
+        if ok { return }
+    }
+    let safe = body.replacingOccurrences(of: "\\", with: "").replacingOccurrences(of: "\"", with: "'")
+    runProcessWithTimeout(
+        "/usr/bin/osascript",
+        arguments: ["-e", "display notification \"\(safe)\" with title \"Session Log Archive Failed\" sound name \"Basso\""],
+        timeout: 15
+    )
+}
+
 // MARK: - Args
 
 let args = CommandLine.arguments
@@ -149,7 +205,9 @@ func run() {
 
     let readURL = sourceOverride.map { URL(fileURLWithPath: $0) } ?? sessionLog
     guard let content = try? String(contentsOf: readURL, encoding: .utf8), !content.isEmpty else {
-        log("session-log.md is empty or not accessible — nothing to archive")
+        let msg = "session-log.md is empty or not accessible — nothing to archive"
+        log(msg)
+        if !dryRun { notifyFailure(msg) }
         return
     }
     let lines = splitKeepingEnds(content)
@@ -241,7 +299,9 @@ func run() {
                 let entryCount = monthLines.filter { $0.hasPrefix("## ") }.count
                 log("Wrote \(entryCount) entries to session-log-\(month).md")
             } catch {
-                log("ERROR: failed to write session-log-\(month).md — \(error)")
+                let msg = "ERROR: failed to write session-log-\(month).md — \(error)"
+                log(msg)
+                notifyFailure(msg)
                 exit(1)
             }
         }
@@ -254,7 +314,9 @@ func run() {
         do {
             try newSession.joined().write(to: sessionLog, atomically: true, encoding: .utf8)
         } catch {
-            log("ERROR: failed to write session-log.md back — \(error)")
+            let msg = "ERROR: failed to write session-log.md back — \(error)"
+            log(msg)
+            notifyFailure(msg)
             exit(1)
         }
     }
