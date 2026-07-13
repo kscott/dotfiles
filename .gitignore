@@ -4,6 +4,7 @@ config/gh/hosts.yml
 claude-skills/team-metrics/node_modules/
 **/__pycache__/
 *.pyc
+swift-tools/*/.build/
 
 # Override global *tags* rule for scripts that legitimately contain "tags" in the name
 !bin/audiobook-tags.py

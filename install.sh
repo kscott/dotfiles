@@ -276,6 +276,17 @@ if [[ $MACHINE == "personal" ]]; then
     fi
   done
 
+  echo "==> Building archive-session-log"
+  ARCHIVE_LOG_SRC="$DOTFILES/swift-tools/archive-session-log"
+  if [[ -d "$ARCHIVE_LOG_SRC" ]]; then
+    (cd "$ARCHIVE_LOG_SRC" && swift build -c release) \
+      && codesign --sign "Developer ID Application: Kenneth Scott (6Q96Q79QN8)" --force --options runtime \
+           "$ARCHIVE_LOG_SRC/.build/release/archive-session-log" \
+      && cp "$ARCHIVE_LOG_SRC/.build/release/archive-session-log" "$HOME/bin/archive-session-log" \
+      && chmod +x "$HOME/bin/archive-session-log" \
+      && echo "  built and installed archive-session-log"
+  fi
+
   echo "==> Linking ~/Sites files"
   # ~/Sites is a protected macOS special folder that always exists —
   # link files into it individually, don't try to create or replace
@@ -303,7 +314,6 @@ if [[ $MACHINE == "personal" ]]; then
   link bin/music-blurbs.py            bin/music-blurbs.py
   link bin/music-gap.py               bin/music-gap.py
   link bin/music-rank.py              bin/music-rank.py
-  link bin/archive-session-log.py    bin/archive-session-log.py
 fi
 
 # ── Work setup ─────────────────────────────────────────────────────────────────

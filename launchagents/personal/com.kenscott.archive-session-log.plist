@@ -7,9 +7,7 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/bin/env</string>
-        <string>python3</string>
-        <string>/Users/ken/bin/archive-session-log.py</string>
+        <string>/Users/ken/bin/archive-session-log</string>
     </array>
 
     <key>StartCalendarInterval</key>
