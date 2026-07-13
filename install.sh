@@ -171,7 +171,9 @@ else
 fi
 
 echo "==> Installing vim plugins"
-vim +PlugUpdate +qall
+# +qall exits non-zero when stdout isn't a TTY (harmless warning) — don't let
+# set -e halt the rest of the install over it. Update vim plugins manually.
+vim +PlugUpdate +qall || true
 
 # ── Personal setup ─────────────────────────────────────────────────────────────
 
