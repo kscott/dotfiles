@@ -83,6 +83,15 @@ link claude-skills         .claude/skills
 link claude/settings.json  .claude/settings.json
 link claude/CLAUDE.md      .claude/CLAUDE.md
 
+echo "==> Linking Claude helper scripts (all machines)"
+# These back shared claude/settings.json behavior, so both machines need them:
+#   sed shim -> CLAUDECODE-scoped block (settings.json no longer hooks sed)
+#   claude-session-pull -> referenced by the SessionStart hook
+mkdir -p $HOME/bin
+link bin/sed                   bin/sed
+link bin/claude-session-pull   bin/claude-session-pull
+link bin/claude-dotfiles-check bin/claude-dotfiles-check
+
 echo "==> Linking tool configs"
 link gemrc      .gemrc
 link ripgreprc  .ripgreprc
@@ -279,8 +288,6 @@ if [[ $MACHINE == "personal" ]]; then
   mkdir -p $HOME/bin
   link bin/brew-update.sh             bin/brew-update.sh
   link bin/claude-status.sh           bin/claude-status.sh
-  link bin/claude-session-pull        bin/claude-session-pull
-  link bin/claude-dotfiles-check      bin/claude-dotfiles-check
   link bin/fix-claude-iterm-colors.py bin/fix-claude-iterm-colors.py
   link bin/transcribe                 bin/transcribe
   link bin/sort-downloads.sh          bin/sort-downloads.sh
@@ -295,7 +302,6 @@ if [[ $MACHINE == "personal" ]]; then
   link bin/music-gap.py               bin/music-gap.py
   link bin/music-rank.py              bin/music-rank.py
   link bin/archive-session-log.py    bin/archive-session-log.py
-  link bin/sed                       bin/sed
 fi
 
 # ── Work setup ─────────────────────────────────────────────────────────────────
