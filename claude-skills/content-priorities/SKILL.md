@@ -80,7 +80,7 @@ hand-build from scratch:
 
 ### Re-ranking (timeline / board row order) — DRIVABLE, one call
 Row order in the timeline and on the board is **Rank**. Unlike card colors, this IS reliably drivable:
-`PUT /rest/agile/1.0/issue/rank` with `{"issues":[...keys in desired top-to-bottom order...],"rankAfterIssue":"TACO-<topEpic>"}` (or `rankBeforeIssue`). **Array order is preserved**, up to 50 issues per call, returns **204 No Content**. So a full reorder is ONE call: make the intended top epic the anchor and pass all the rest, in order, with `rankAfterIssue: <top epic>`. Use a single clean curl (no `for`-loops, no `-o` file writes — the sandbox hook blocks those shapes; a lone `curl -X PUT … --data '…'` works). Verify with `project = TACO AND issuetype = Epic AND statusCategory != Done ORDER BY Rank ASC`. **Ken never drags rows — drive this for him.** Established good order (2026-06-18): In Progress (active) → Parked → On Deck (CSS cluster first) → Backlog → evergreen containers (3372/4210/3403) last.
+`PUT /rest/agile/1.0/issue/rank` with `{"issues":[...keys in desired top-to-bottom order...],"rankAfterIssue":"TACO-<topEpic>"}` (or `rankBeforeIssue`). **Array order is preserved**, up to 50 issues per call, returns **204 No Content**. So a full reorder is ONE call: make the intended top epic the anchor and pass all the rest, in order, with `rankAfterIssue: <top epic>`. Use a single clean curl (no `for`-loops, no `-o` file writes — the sandbox hook blocks those shapes; a lone `curl -X PUT … --data '…'` works). Verify with `project = TACO AND issuetype = Epic AND statusCategory != Done ORDER BY Rank ASC`. **Ken never drags rows — drive this for him.** Established good order (2026-06-18): In Progress (active) → Parked → On Deck (CSS cluster first) → Backlog → evergreen containers (Ongoing Maintenance + Renovate, e.g. 4635/3403) last.
 
 ## Theme palette (epic color-coding)
 
@@ -92,7 +92,7 @@ Every non-Done epic carries exactly **one theme label**. Ken does NOT manage the
 | `ipn` | Green | IPN / BOWO route work + Retailer Distribution on the IPN |
 | `platform-dx` | Yellow | Internal platform, infra, tech-debt, DX, dev-tooling, rules-mcp, monolith decoupling, dependency/runtime upgrades |
 | `product` | Purple | Product / business-facing / saver-facing feature work |
-| `ops` | Grey | Perpetual containers — Renovate, Ongoing Maintenance, On-call. Never "complete"; de-emphasized. |
+| `ops` | Grey | Perpetual containers — Renovate, Ongoing Maintenance (on-call work folds in here — no separate on-call epic as of Q3 2026). Never "complete"; de-emphasized. |
 
 Maintenance rules:
 - **Apply the theme label when an epic is created or re-triaged** — same action, so coverage stays complete. After any epic-creation, set its theme.
@@ -127,10 +127,13 @@ which lands in the Parked column. Re-parent a story with `editJiraIssue` → `{"
    - **Opportunistic long-runners** (e.g. TACO-4320 JS→TS) — intermittent sprint presence is by design.
    - **Pre-direction foundation work** (e.g. TACO-4137 BOWO IPN) — high % done but parent initiative's
      direction unsettled; finishing is premature. Don't pitch as a push-to-close quick win.
-   - **Perpetual containers** — Renovate (3403), Ongoing Maintenance (3372), On-call (4210). They never
-     "close"; leave running, don't park, don't measure on burndown.
+   - **Perpetual containers** — Renovate (3403) and Ongoing System Maintenance (current: 4635, rolls
+     forward each quarter). They never "close"; leave running, don't park, don't measure on burndown.
+     **On-call is no longer a separate container** — the quarterly Content On-call epic was retired in
+     Q3 2026 (it only existed for now-unused automation); on-call stories now parent to Ongoing Maintenance.
+     Don't create or expect a quarterly on-call epic.
 4. **Before closing an epic** — check for open *active* children (in-review/started); they'd be stranded.
-   Re-home them (often to Ongoing Maintenance 3372) first. If an epic has real research worth keeping
+   Re-home them (often to the current Ongoing System Maintenance epic, e.g. 4635) first. If an epic has real research worth keeping
    (e.g. all-spike investigation epics), preserve it in Confluence under the **Content Squad** page
    (id `1379893545`, space `TT`) before closing, and leave a pointer comment on the epic.
 
@@ -185,8 +188,9 @@ curl -s -u "$ATLASSIAN_API_USER:$ATLASSIAN_API_TOKEN" -X PUT -H 'Content-Type: a
 **Honor the same exceptions as parking** — don't mis-handle a known-good epic:
 - **Pre-direction foundation** (e.g. TACO-4137) — if overdue, re-date or clear the due date; never pitch as
   a quick close. Parent direction is unsettled.
-- **Perpetual containers** (3372 Maintenance, 4210 On-call, 3403 Renovate) — carry full-period dates by
-  design. When one lapses (e.g. 4210 at quarter-end), roll it to the next period; don't flag as a problem.
+- **Perpetual containers** (Ongoing Maintenance, current 4635; Renovate 3403) — carry full-period dates by
+  design. When one lapses at quarter-end, roll it to the next period; don't flag as a problem. (No separate
+  on-call container as of Q3 2026 — on-call folds into Ongoing Maintenance.)
 - **Opportunistic long-runners** (e.g. 4320) and **non-sprint platform work** (board 641) — fine to carry
   distant due dates; don't compress them.
 
