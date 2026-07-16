@@ -115,6 +115,11 @@ Transitions (`transitionJiraIssue`): Start Progress → Started `191` · **Park*
 Standardize "in progress" epics on **Started** (191). Park = move to Selected for Development (421),
 which lands in the Parked column. Re-parent a story with `editJiraIssue` → `{"parent":{"key":"TACO-NNNN"}}`.
 
+**Stories queued for dev → "Selected for Development" (421), NOT "Ready For Development" (361).** That's
+the team's convention on the content board; "Ready For Development" is not used for queued stories (and is
+unmapped at the epic level). When creating a story or advancing it to a ready-to-pick-up state, transition
+to **Selected for Development**. Applies to Stories specifically. (Ken's correction, 2026-07-16.)
+
 ## The triage workflow
 
 1. **Misplaced epics** — epic in a To Do column but child stories are in progress / closed → should be
