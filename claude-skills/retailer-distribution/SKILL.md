@@ -61,9 +61,9 @@ Post the check-in template (in `Weekly Updates.md`) **live** to the channel — 
 ## E2E testing
 
 **Boundaries / seams** (also the sheet's tabs):
-- **Primary** — Program API → ODS (PA→RDef, RDef→ODS, NG→RDef, NG→ODS)
-- **Secondary** — Purchase Gateway → Match (NG→PG, PG→Match)
-- **Tertiary** — RDef → Content (RewardUpdated); Content ↔ Network Graph
+- **Distribution** — Program API → ODS (PA→RDef, RDef→ODS, NG→RDef, NG→ODS)
+- **Purchase** — Purchase Gateway → Match (NG→PG, PG→Match)
+- **Publisher (D2C) ↔ IPN** — RDef → Content (RewardUpdated); Content ↔ Network Graph (v1, not an MVP gate)
 
 **Approach:** async fill via the sheet stalled once (empty on deadline). The pattern that unstuck it: **seed every seam with a draft test plan** (one happy path + a few edge cases per seam, suggested owners, marked draft), then run a **working session** for leads to supplement and confirm owners. Framing to keep: the seed is a *deliberately shallow first pass — each lead owns fully testing their own seams.*
 
@@ -72,11 +72,11 @@ The `gws` CLI prints a `Using keyring backend: keyring` line to stdout — **str
 
 ```bash
 # read a tab
-gws sheets +read --spreadsheet <SHEET_ID> --range "'Primary — PA→ODS'!A1:I50" --format json 2>/dev/null | grep -v "keyring backend"
+gws sheets +read --spreadsheet <SHEET_ID> --range "'Distribution — PA→ODS'!A1:I50" --format json 2>/dev/null | grep -v "keyring backend"
 
 # write/overwrite a range (RAW keeps text literal — arrows, em-dashes)
 gws sheets spreadsheets values update \
-  --params '{"spreadsheetId":"<SHEET_ID>","range":"'"'"'Primary — PA→ODS'"'"'!A1","valueInputOption":"RAW"}' \
+  --params '{"spreadsheetId":"<SHEET_ID>","range":"'"'"'Distribution — PA→ODS'"'"'!A1","valueInputOption":"RAW"}' \
   --json '{"values":[["row","of","cells"]]}'
 ```
 For multi-row writes, build the payload in Python and call `gws` via `subprocess` (avoids shell-quoting pain with arrows/em-dashes). Confluence / Jira / Calendar use the `claude_ai` Atlassian + Google MCP tools.
