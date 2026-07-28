@@ -1,0 +1,122 @@
+#!/bin/zsh
+# Mirror the ProductOS shared Google Drive to ~/ProductOS (read-only, one-way).
+#
+# Drive is the source of truth. This is `rclone sync`, so anything in ~/ProductOS
+# that is NOT on the drive gets DELETED. Do not keep your own notes in there.
+#
+# Native Google files are exported on the way down so they're greppable:
+#   Docs   -> .md
+#   Slides -> .pptx
+#
+# Force an immediate run:  productos-sync now
+# Tail the log:            productos-sync log
+
+set -u
+
+RCLONE=/opt/homebrew/bin/rclone
+REMOTE=productos:
+DEST="$HOME/ProductOS"
+LOG="$HOME/Library/Logs/productos-sync.log"
+LABEL=com.kenscott.productos-sync
+# Anything the mirror removes or overwrites lands here first, so a stray local
+# file (or a drive-side deletion) is recoverable instead of just gone.
+TRASH="$HOME/.local/state/productos-sync/replaced"
+
+case "${1:-}" in
+  now)
+    exec launchctl kickstart -k "gui/$(id -u)/$LABEL"
+    ;;
+  log)
+    exec tail -n 40 -f "$LOG"
+    ;;
+  status)
+    launchctl print "gui/$(id -u)/$LABEL" 2>/dev/null | grep -E 'state|last exit|runs' || echo "not loaded"
+    echo "local: $(find "$DEST" -type f 2>/dev/null | wc -l | tr -d ' ') files, $(du -sh "$DEST" 2>/dev/null | cut -f1)"
+    echo "recoverable: $(find "$TRASH" -type f 2>/dev/null | wc -l | tr -d ' ') files in $TRASH"
+    if [[ -f "$HOME/.local/state/productos-sync/BROKEN" ]]; then
+      print -r -- ""
+      print -r -- "*** BROKEN ***"
+      cat "$HOME/.local/state/productos-sync/BROKEN"
+      print -r -- "fix auth with:  rclone config reconnect productos:"
+    else
+      print -r -- "health: ok (last run succeeded)"
+    fi
+    exit 0
+    ;;
+  trash)
+    echo "$TRASH"
+    find "$TRASH" -type f 2>/dev/null | head -40
+    exit 0
+    ;;
+esac
+
+mkdir -p "$DEST" "$(dirname "$LOG")" "$TRASH"
+
+# Drop recoverable copies older than 14 days.
+find "$TRASH" -type f -mtime +14 -delete 2>/dev/null
+find "$TRASH" -type d -empty -delete 2>/dev/null
+
+# Keep the log from growing without bound (rotate past ~2 MB).
+if [[ -f "$LOG" && $(stat -f%z "$LOG") -gt 2097152 ]]; then
+  mv -f "$LOG" "$LOG.1"
+fi
+
+"$RCLONE" sync "$REMOTE" "$DEST" \
+  --drive-export-formats md,pptx \
+  --create-empty-src-dirs \
+  --backup-dir "$TRASH/$(date '+%Y%m%d-%H%M%S')" \
+  --fast-list \
+  --track-renames \
+  --transfers 8 \
+  --checkers 16 \
+  --log-level INFO \
+  --log-file "$LOG" \
+  --stats-one-line \
+  --stats 0
+
+rc=$?
+print -r -- "$(date '+%Y-%m-%d %H:%M:%S') productos-sync finished rc=$rc" >> "$LOG"
+
+# --- failure surfacing -------------------------------------------------------
+# The OAuth client belongs to someone else's GCP project (346553621992), so the
+# most likely failure here is the token or client being revoked out from under
+# us. That must not die quietly in a log nobody reads.
+STATE="$HOME/.local/state/productos-sync"
+FAILS="$STATE/consecutive-failures"
+ALERT="$STATE/BROKEN"
+
+TN=/opt/homebrew/bin/terminal-notifier
+
+# Immediate but ephemeral. -ignoreDnD pierces Focus; -group replaces the previous
+# banner instead of stacking one per hour. Mirrors backup-folder.py's notify_failure().
+notify() {
+  if [[ -x "$TN" ]]; then
+    "$TN" -title "ProductOS sync" -message "${1:0:240}" \
+          -sound Basso -ignoreDnD -group productos-sync >/dev/null 2>&1 && return
+  fi
+  /usr/bin/osascript -e "display notification \"$1\" with title \"ProductOS sync\" sound name \"Basso\"" 2>/dev/null
+}
+
+
+if [[ $rc -eq 0 ]]; then
+  print -r -- 0 > "$FAILS"
+  # Recovered: clear the marker and say so, but only if it had actually broken.
+  if [[ -f "$ALERT" ]]; then
+    rm -f "$ALERT"
+    notify "Sync recovered."
+  fi
+else
+  n=$(( $(cat "$FAILS" 2>/dev/null || print 0) + 1 ))
+  print -r -- "$n" > "$FAILS"
+
+  # Auth failures are not transient — flag on the first one.
+  if tail -60 "$LOG" | grep -qiE 'invalid_grant|401|unauthorized|invalid client|token expired|oauth'; then
+    print -r -- "$(date '+%Y-%m-%d %H:%M:%S') AUTH FAILURE: authorization rejected — OAuth client or token likely revoked" > "$ALERT"
+    notify "Auth failed. Run: rclone config reconnect productos:"
+  elif [[ $n -ge 2 ]]; then
+    print -r -- "$(date '+%Y-%m-%d %H:%M:%S') $n consecutive failures (rc=$rc)" > "$ALERT"
+    notify "$n consecutive sync failures. Run: productos-sync log"
+  fi
+fi
+
+exit $rc

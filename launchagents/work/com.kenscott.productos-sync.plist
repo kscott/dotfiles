@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.kenscott.productos-sync</string>
+
+	<!-- ~/bin/productos-sync is a symlink to dotfiles/bin/productos-sync. -->
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/ken.scott/bin/productos-sync</string>
+	</array>
+
+	<!-- Hourly. Also runs once at load / login so the mirror is fresh after a reboot. -->
+	<key>StartInterval</key>
+	<integer>3600</integer>
+
+	<key>RunAtLoad</key>
+	<true/>
+
+	<!-- Don't pile up runs if one is slow or the network is down. -->
+	<key>AbandonProcessGroup</key>
+	<false/>
+
+	<key>ProcessType</key>
+	<string>Background</string>
+
+	<key>LowPriorityIO</key>
+	<true/>
+
+	<key>StandardOutPath</key>
+	<string>/Users/ken.scott/Library/Logs/productos-sync.launchd.log</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/ken.scott/Library/Logs/productos-sync.launchd.log</string>
+
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<key>HOME</key>
+		<string>/Users/ken.scott</string>
+	</dict>
+</dict>
+</plist>
