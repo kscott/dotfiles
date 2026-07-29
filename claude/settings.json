@@ -2,6 +2,13 @@
   "permissions": {
     "defaultMode": "auto"
   },
+  "skillOverrides": {
+    "configcat-migration": "off",
+    "review-recognition": "off",
+    "sprint-capacity": "off",
+    "sprint-point": "off",
+    "sprint-velocity": "off"
+  },
   "hooks": {
     "PreToolUse": [
       {
