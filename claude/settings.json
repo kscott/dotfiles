@@ -5,9 +5,7 @@
   "skillOverrides": {
     "configcat-migration": "off",
     "review-recognition": "off",
-    "sprint-capacity": "off",
-    "sprint-point": "off",
-    "sprint-velocity": "off"
+    "sprint-point": "off"
   },
   "hooks": {
     "PreToolUse": [
