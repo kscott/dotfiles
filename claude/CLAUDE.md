@@ -11,6 +11,18 @@ GitHub: kscott | Email: ken@optikos.net
 
 ---
 
+## Publishing & Pushing
+
+Never publish to Confluence, Google Docs, Slack, or Jira until Ken explicitly says "ok", "approved", or "publish it". Draft first, show the rendered text, then wait. This covers creating pages, updating published pages, sending messages, and writing to tickets.
+
+Before publishing, show the exact final output as it will appear in the target system and flag anything suspicious: double em-dashes, run-together or missing link text, claimed bold/heading formatting the target won't actually apply, placeholder links.
+
+When Ken says "save, commit and push", first check whether the work is **already** committed and pushed and report status — don't go hunting for new uncommitted changes to sweep in.
+
+(Ordinary `git push` of finished work is governed by "Git: commit and push once work is done" below — that's a standing default and this section does not override it.)
+
+---
+
 ## Banned Bash commands
 
 ### `sed` — MUST NOT be used, ever
@@ -53,6 +65,18 @@ Both the `--back` value and the session log header must use rounded times.
 
 - **Never edit `doing.md` directly.** Always use `doing done`, `doing now`, `doing tag`, etc. Direct edits bypass UUID tracking and corrupt the backup chain.
 - **Never use `doing undo`.** It doesn't remove individual entries — it restores to a prior snapshot and will likely corrupt unrelated entries. If an entry is wrong, acknowledge it and ask Ken how to handle it.
+
+---
+
+## Calendar & Reminders rules
+
+Do NOT create, move, or delete a calendar event unless explicitly asked for **that specific event**. If the event already exists, report it and stop — don't "fix" it by recreating it.
+
+Never write to Reminders, Contacts, or Messages from a script, automation, or error path. Those are explicit per-instance requests only.
+
+"Invite me personally" means invite Ken's personal work-adjacent identity as an attendee — ask which address if ambiguous, never guess.
+
+If Ken gave a duration or buffer, use it. Don't default to an hour.
 
 ---
 
@@ -133,3 +157,41 @@ what counts as a done, coherent unit, same as always.
 ## Tools and workarounds
 
 When an old tool version is causing problems or requiring workarounds, flag it and update via brew before engineering around the limitation.
+
+---
+
+## Jira conventions
+
+Query by underlying **status** names, not board column names. Column labels don't map 1:1 to statuses and produce counts that don't match Ken's board.
+
+Don't infer an initiative's Dev Type from its parent or its labels — read the field. PROD-3237 is deliberately `New/Feature` (capitalizable) despite sitting under a BAU parent and carrying a `Maintenance-Initiative` label.
+
+Ticket scope is exactly what Ken asked for. No extra clients, deadlines, services, or acceptance criteria beyond the stated ask.
+
+---
+
+## Slack search
+
+Always search **both** public and private channels (`slack_search_public_and_private`). Public-only search silently undercounts and misses `#content_squad` entirely — it produced a wrong weekly metrics report twice before being caught.
+
+Use Slack IDs, not handles: `from:<@SLACK_ID>`.
+
+---
+
+## Documentation grounding
+
+Before analyzing or documenting a repo, fetch/pull and confirm the checkout is current. A stale checkout has already produced a wrong answer (it hid a relocated CIC consumer).
+
+Ground every claim in actual code, protos, or a real API sample, and cite the file path. Do not assert ownership, network topology, or architecture from inference — flag it as inferred or go read it.
+
+Team-facing ask docs: no effort estimates, no "interim" or positional-seam framing.
+
+---
+
+## Dotfiles & machine setup
+
+`install.sh` takes a machine-role argument (`home` or `work`) — confirm which role applies before running it rather than letting it prompt.
+
+Respect existing symlink and naming conventions. `~/.claude/CLAUDE.md`, `~/.claude/settings.json`, and `~/.claude/skills` are all symlinks into `~/dotfiles`, so a change made on the work Mac lands on the home Mac too — flag cross-machine impact before editing skills or config. Note that `~/ai/CLAUDE.md` is a different case: it's a symlink into iCloud, so it syncs but has no git history to revert from.
+
+Clean up temp artifacts before finishing (e.g. a stray `download.bin` from a `gws drive files get` without `-o`).
