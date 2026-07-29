@@ -48,6 +48,13 @@ Review what was accomplished. Write a concise doing entry (one line, imperative,
 1. **Now:** read the current time from the `## Current Time` block above (e.g. 22:58)
 2. **Rounded end:** round to nearest :00, :15, :30, or :45 (e.g. 22:58 → 23:00)
 3. **Start time:** prefer what the user stated (e.g. "started at 9pm" → 21:00). Otherwise **read `~/.claude/work-clock`** with the Read tool — the `SessionStart` hook stamps session start there, and `/log` advances it at the end of each run, so it marks the start of *this* chunk. Use that time. Only if the file is missing *and* the user said nothing, ask.
+
+   **Check the work-clock's date before trusting it.** `SessionStart` fires once per session, not once per day, so a session left open overnight leaves the clock stamped with the *previous* chunk's end from a prior day. If its date is not today, do **not** use it — using it silently produces an entry many hours long. Instead:
+   - Say the clock is stale and give its value.
+   - Look for evidence of when the untracked work actually ran and when it stopped — scratchpad file mtimes, `git log` timestamps in `~/dotfiles` / `~/ai` / `~/Notes`, log files the session wrote. State what you found.
+   - Ask the user to confirm the start time, proposing the evidence-based one.
+   - **Also check whether a whole earlier chunk went unlogged.** An overnight-open session usually means the previous day's final chunk never got a `/log` at all. If so, log that chunk too, backdated: `doing done "…" --at "YYYY-MM-DD HH:MM" --took <dur>` (an explicit date is required; a bare time lands on today), plus its own session log entry under the correct date heading.
+
 4. **Rounded start:** round start to nearest :00, :15, :30, or :45
 5. **`--back` value:** the rounded start time as a clock time (e.g. `--back 9pm`), NOT a duration
 
