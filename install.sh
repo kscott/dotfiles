@@ -162,7 +162,7 @@ if [[ -n $CHRUBY_SH ]]; then
   latest_ruby=$(ls ~/.rubies/ | grep "^ruby-" | sort -V | tail -1)
   if [[ -n $latest_ruby ]]; then
     chruby $latest_ruby
-    echo $latest_ruby | sed 's/ruby-//' > ~/.ruby-version
+    echo ${latest_ruby#ruby-} > ~/.ruby-version
     echo "  Using $latest_ruby"
     gem install git-smart doing --no-document
   fi
