@@ -1,5 +1,6 @@
 *.sw?
-*tags*
+tags
+.tags
 *~
 .vimprojects
 nbproject
