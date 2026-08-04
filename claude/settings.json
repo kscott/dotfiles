@@ -69,8 +69,8 @@
     }
   },
   "awaySummaryEnabled": false,
-  "mouseReporting": false,
   "tui": "fullscreen",
   "theme": "dark-ansi",
-  "verbose": true
+  "verbose": true,
+  "mouseReporting": false
 }
